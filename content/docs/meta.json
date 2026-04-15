@@ -1,0 +1,21 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "---Getting Started---",
+    "quickstart",
+    "concepts",
+    "---Building Your Org---",
+    "org-template",
+    "plugins",
+    "channels",
+    "schedules",
+    "---Platform Reference---",
+    "architecture",
+    "api-reference",
+    "self-hosting",
+    "---Operating---",
+    "observability",
+    "troubleshooting"
+  ]
+}

@@ -1,0 +1,74 @@
+---
+title: Quickstart
+description: Spin up your first multi-agent org in under five minutes.
+---
+
+This guide gets you from zero to a running PM + Dev Lead + Engineer team
+using the bundled `molecule-dev` template.
+
+## Prerequisites
+
+- Docker Desktop (or any Docker daemon) running locally
+- Go 1.25+ and Node 22+ if you want to build the platform from source
+- A Claude API key (`CLAUDE_CODE_OAUTH_TOKEN`) in your environment
+
+## 1. Clone the monorepo
+
+```bash
+git clone https://github.com/Molecule-AI/molecule-monorepo.git
+cd molecule-monorepo
+```
+
+## 2. Boot the platform
+
+```bash
+docker compose up -d --build platform canvas
+```
+
+This starts:
+- **platform** (Go API on `localhost:8080`)
+- **canvas** (Next.js 15 frontend on `localhost:3000`)
+- **postgres** + **redis** for state and pub/sub
+
+## 3. Import the dev template
+
+```bash
+curl -X POST http://localhost:8080/org/import \
+  -H 'Content-Type: application/json' \
+  -d '{"dir":"molecule-dev"}'
+```
+
+This provisions the 12-workspace dev team — PM, Research Lead and 3
+researchers, Dev Lead and 5 engineers, plus Security/QA/UIUX auditors —
+each as its own Docker container.
+
+## 4. Open the canvas
+
+Navigate to [http://localhost:3000](http://localhost:3000). You should
+see your team rendered as a tree of nodes. Click any node to chat with
+that agent directly.
+
+## 5. Talk to PM
+
+PM is the entry point. Send it a task:
+
+> *"Add a 'Last seen' column to the user list table on the admin page."*
+
+PM will break the request into specific assignments, fan them out to the
+right leads in parallel, verify the results, and report back when the
+work is shipped.
+
+## What just happened
+
+You spun up a self-organising engineering team in one command. They're
+clones of real Claude Code agents — they can read your codebase, run
+tests, open PRs to GitHub. Their schedules (security audit, UX audit,
+template fitness checks) run hourly on their own.
+
+## Next steps
+
+- Customise the [Org Template](/docs/org-template) to match your team's
+  actual structure.
+- Add [Plugins](/docs/plugins) to give specific roles new capabilities.
+- Wire a [Channel](/docs/channels) so you can talk to PM from Telegram.
+- Read about the [Architecture](/docs/architecture) under the hood.

@@ -1,0 +1,105 @@
+---
+title: Concepts
+description: The five primitives that compose every Molecule AI org — workspaces, plugins, channels, schedules, and the canvas.
+---
+
+If you understand these five concepts, you understand the whole platform.
+
+## Workspaces
+
+A **workspace** is a real Docker container running a real LLM agent. Each
+workspace has:
+
+- A **role** (a one-line job description fed into its system prompt)
+- An **initial prompt** (run once at first boot — typically clone repo,
+  read CLAUDE.md, memorise context)
+- A **runtime** (`claude-code`, `langgraph`, `crewai`, `autogen`, etc.)
+- A **tier** (resource budget — memory and CPU caps)
+- An optional **parent** (forms the org tree)
+- An optional **workspace_dir** (a host path bind-mounted into the
+  container — gives the agent direct access to your codebase)
+
+Workspaces talk to each other via A2A (agent-to-agent) messages, routed
+by the platform. Every message becomes an edge on the canvas in real
+time.
+
+## Plugins
+
+A **plugin** is a bundle of capabilities a workspace can install:
+
+- **Hooks** — `PreToolUse`, `PostToolUse`, `UserPromptSubmit` — for
+  guardrails, audit trails, dangerous-command refusal
+- **Skills** — multi-criteria code review, cross-vendor adversarial
+  review, LLM-as-judge gates
+- **Slash commands** — `/triage`, `/retro`, etc.
+- **MCP servers** — bring in tools the model can call
+- **Builtin tools** — Python/JS extensions exposed to the agent
+
+Plugins compose. Per-workspace plugin lists UNION with the org-wide
+defaults — so adding one extra capability to one role doesn't require
+re-listing every default.
+
+## Channels
+
+A **channel** wires a workspace to an external messaging surface:
+Telegram, Slack, Discord, email, webhooks. Once connected, the user can
+talk to the agent from outside the canvas — and the agent can broadcast
+back.
+
+## Schedules
+
+A **schedule** is a cron-driven recurring prompt. Each tick fires an A2A
+message into the workspace, which the agent treats as a new task. Every
+running schedule is supervised — panics in the dispatch path are
+recovered with exponential backoff, and a liveness watchdog surfaces
+stuck subsystems via `/admin/liveness`.
+
+Schedules let you build the *evolution* loop alongside the *review*
+loop: hourly security audits, daily ecosystem watches, weekly plugin
+curation, etc.
+
+## The canvas
+
+The **canvas** is a Next.js 15 React Flow visualisation of your org.
+Every workspace is a node. Every A2A message is an edge. Every memory
+write, every scheduled fire, every status change pushes a WebSocket
+event in real time.
+
+The canvas isn't just a viewer — it's the operator surface. Drag nodes
+to reorganise, click to chat, watch the team work.
+
+## How they fit together
+
+A typical org definition looks like:
+
+```yaml
+org_name: My Team
+defaults:
+  runtime: claude-code
+  tier: 2
+  plugins: [ecc, molecule-dev, superpowers, molecule-careful-bash, ...]
+  category_routing:
+    security: [Backend Engineer]
+    ui: [Frontend Engineer]
+
+workspaces:
+  - name: PM
+    canvas: { x: 400, y: 50 }
+    plugins: [molecule-workflow-triage, molecule-workflow-retro]
+    channels:
+      - type: telegram
+        config: { ... }
+    children:
+      - name: Dev Lead
+        children:
+          - name: Frontend Engineer
+          - name: Backend Engineer
+            schedules:
+              - name: Hourly typecheck
+                cron_expr: "0 * * * *"
+                prompt: "Run npm run typecheck and report any new errors..."
+```
+
+That's the entire mental model. Templates → plugins → channels →
+schedules → canvas. Everything else in the docs is depth on one of
+these five.

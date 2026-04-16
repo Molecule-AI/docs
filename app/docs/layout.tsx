@@ -4,8 +4,9 @@ import { baseOptions } from '@/app/layout.config';
 import { source } from '@/lib/source';
 
 export default function Layout({ children }: { children: ReactNode }) {
+  const tree = source.pageTree;
   return (
-    <DocsLayout tree={source.pageTree} {...baseOptions}>
+    <DocsLayout tree={tree} {...baseOptions}>
       {children}
     </DocsLayout>
   );

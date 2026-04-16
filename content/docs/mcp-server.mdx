@@ -1,0 +1,158 @@
+---
+title: MCP Server
+description: Manage Molecule AI workspaces from any MCP-compatible AI agent using 87 tools.
+---
+
+The Molecule AI MCP server lets any MCP-compatible AI agent (Claude Code,
+Cursor, etc.) manage workspaces, agents, secrets, memory, schedules,
+channels, and more through the platform API.
+
+## Quick start
+
+### Install
+
+```bash
+npx @molecule-ai/mcp-server
+```
+
+### Configure in `.mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "molecule": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@molecule-ai/mcp-server"],
+      "env": {
+        "MOLECULE_URL": "http://localhost:8080"
+      }
+    }
+  }
+}
+```
+
+For SaaS deployments, set `MOLECULE_URL` to your tenant URL:
+
+```json
+"MOLECULE_URL": "https://your-org.moleculesai.app"
+```
+
+### Verify
+
+Once configured, your MCP client should show 87 Molecule AI tools. Test with:
+
+```
+list_workspaces
+```
+
+## Tool categories
+
+The MCP server exposes tools across these categories:
+
+### Workspace management
+
+| Tool | API Route | Description |
+|---|---|---|
+| `list_workspaces` | `GET /workspaces` | List all workspaces |
+| `create_workspace` | `POST /workspaces` | Create a new workspace |
+| `get_workspace` | `GET /workspaces/:id` | Get workspace details |
+| `update_workspace` | `PATCH /workspaces/:id` | Update workspace fields |
+| `delete_workspace` | `DELETE /workspaces/:id` | Delete a workspace |
+| `restart_workspace` | `POST /workspaces/:id/restart` | Restart container |
+| `pause_workspace` | `POST /workspaces/:id/pause` | Pause workspace |
+| `resume_workspace` | `POST /workspaces/:id/resume` | Resume paused workspace |
+
+### Communication
+
+| Tool | API Route | Description |
+|---|---|---|
+| `chat_with_agent` | `POST /workspaces/:id/a2a` | Send A2A message |
+| `async_delegate` | `POST /workspaces/:id/delegate` | Fire-and-forget delegation |
+| `check_delegations` | `GET /workspaces/:id/delegations` | Check delegation status |
+| `list_peers` | `GET /registry/:id/peers` | Find peer workspaces |
+| `notify_user` | `POST /workspaces/:id/notify` | Push notification to canvas |
+
+### Configuration and secrets
+
+| Tool | API Route | Description |
+|---|---|---|
+| `get_config` | `GET /workspaces/:id/config` | Get config.yaml |
+| `update_config` | `PATCH /workspaces/:id/config` | Update config |
+| `list_secrets` | `GET /workspaces/:id/secrets` | List secret keys |
+| `set_secret` | `POST /workspaces/:id/secrets` | Set a secret |
+| `set_global_secret` | `PUT /settings/secrets` | Set a global secret |
+
+### Memory
+
+| Tool | API Route | Description |
+|---|---|---|
+| `memory_list` | `GET /workspaces/:id/memory` | List memory keys |
+| `memory_get` | `GET /workspaces/:id/memory/:key` | Get value |
+| `memory_set` | `POST /workspaces/:id/memory` | Set key-value |
+| `search_memory` | `GET /workspaces/:id/memories` | Full-text search |
+
+### Files
+
+| Tool | API Route | Description |
+|---|---|---|
+| `list_files` | `GET /workspaces/:id/files` | List workspace files |
+| `read_file` | `GET /workspaces/:id/files/*path` | Read file content |
+| `write_file` | `PUT /workspaces/:id/files/*path` | Write file |
+| `replace_all_files` | `PUT /workspaces/:id/files` | Replace all files |
+
+### Schedules
+
+| Tool | API Route | Description |
+|---|---|---|
+| `list_schedules` | `GET /workspaces/:id/schedules` | List cron schedules |
+| `create_schedule` | `POST /workspaces/:id/schedules` | Create schedule |
+| `run_schedule` | `POST /workspaces/:id/schedules/:id/run` | Trigger now |
+
+### Channels
+
+| Tool | API Route | Description |
+|---|---|---|
+| `list_channels` | `GET /workspaces/:id/channels` | List channels |
+| `add_channel` | `POST /workspaces/:id/channels` | Add Telegram/Slack/Lark |
+| `test_channel` | `POST /workspaces/:id/channels/:id/test` | Test connectivity |
+| `send_channel_message` | `POST /workspaces/:id/channels/:id/send` | Send message |
+
+### Plugins
+
+| Tool | API Route | Description |
+|---|---|---|
+| `list_installed_plugins` | `GET /workspaces/:id/plugins` | List installed |
+| `install_plugin` | `POST /workspaces/:id/plugins` | Install from source |
+| `uninstall_plugin` | `DELETE /workspaces/:id/plugins/:name` | Uninstall |
+
+### Tokens
+
+| Tool | API Route | Description |
+|---|---|---|
+| `list_tokens` | `GET /workspaces/:id/tokens` | List workspace tokens |
+| `create_token` | `POST /workspaces/:id/tokens` | Create bearer token |
+| `revoke_token` | `DELETE /workspaces/:id/tokens/:id` | Revoke token |
+
+### Templates and bundles
+
+| Tool | API Route | Description |
+|---|---|---|
+| `list_templates` | `GET /templates` | Available templates |
+| `import_org` | `POST /org/import` | Import org template |
+| `export_bundle` | `GET /bundles/export/:id` | Export workspace |
+| `import_bundle` | `POST /bundles/import` | Import workspace |
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `MOLECULE_URL` | `http://localhost:8080` | Platform API URL |
+
+## Troubleshooting
+
+| Issue | Fix |
+|---|---|
+| Connection refused | Check `MOLECULE_URL` points to running platform |
+| 401 Unauthorized | Token expired or revoked — create a new one |
+| Tools not showing | Run `npx @molecule-ai/mcp-server` standalone to check errors |

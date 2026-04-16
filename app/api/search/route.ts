@@ -1,4 +1,10 @@
-import { source } from '@/lib/source';
-import { createFromSource } from 'fumadocs-core/search/server';
+import { NextResponse } from 'next/server';
 
-export const { GET } = createFromSource(source);
+// Minimal search endpoint — returns empty results. The fumadocs
+// createFromSource/createSearchAPI both crash on v15.8 with "a.map
+// is not a function" during static page collection. This stub keeps
+// the route alive so the site builds; swap back to the fumadocs
+// search API once the upstream fix lands.
+export function GET() {
+  return NextResponse.json([]);
+}

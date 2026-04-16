@@ -1,9 +1,7 @@
 ---
 title: Concepts
-description: The five primitives that compose every Molecule AI org — workspaces, plugins, channels, schedules, and the canvas.
+description: The core primitives that compose every Molecule AI org — workspaces, plugins, channels, schedules, tokens, external agents, and the canvas.
 ---
-
-If you understand these five concepts, you understand the whole platform.
 
 ## Workspaces
 
@@ -12,16 +10,31 @@ workspace has:
 
 - A **role** (a one-line job description fed into its system prompt)
 - An **initial prompt** (run once at first boot — typically clone repo,
-  read CLAUDE.md, memorise context)
-- A **runtime** (`claude-code`, `langgraph`, `crewai`, `autogen`, etc.)
-- A **tier** (resource budget — memory and CPU caps)
+  read docs, memorise context)
+- A **runtime** (`claude-code`, `langgraph`, `crewai`, `autogen`, `deepagents`,
+  `openclaw`, `hermes`, `gemini-cli`)
+- A **tier** (resource budget — T1 sandboxed, T2 standard, T3 privileged, T4 full-host)
 - An optional **parent** (forms the org tree)
 - An optional **workspace_dir** (a host path bind-mounted into the
   container — gives the agent direct access to your codebase)
 
-Workspaces talk to each other via A2A (agent-to-agent) messages, routed
-by the platform. Every message becomes an edge on the canvas in real
-time.
+Workspaces talk to each other via **A2A** (agent-to-agent) messages, routed
+by the platform. Communication rules: same workspace, siblings, and
+parent/child are allowed; everything else is denied.
+
+## External agents
+
+An **external agent** is a workspace with `runtime: external` — it runs on
+your own infrastructure instead of the platform's Docker network. External
+agents:
+
+- Register via `POST /registry/register` and receive a bearer token
+- Send heartbeats every 30 seconds to stay online
+- Accept A2A messages at their registered URL
+- Appear on the canvas with a purple **REMOTE** badge
+- Skip Docker health sweep (liveness is heartbeat-only)
+
+See [External Agents](/docs/external-agents) for the full registration guide.
 
 ## Plugins
 
@@ -33,30 +46,56 @@ A **plugin** is a bundle of capabilities a workspace can install:
   review, LLM-as-judge gates
 - **Slash commands** — `/triage`, `/retro`, etc.
 - **MCP servers** — bring in tools the model can call
-- **Builtin tools** — Python/JS extensions exposed to the agent
 
-Plugins compose. Per-workspace plugin lists UNION with the org-wide
-defaults — so adding one extra capability to one role doesn't require
-re-listing every default.
+Plugins have two axes: **source** (where to fetch — `local://`, `github://`)
+and **shape** (what's inside — agentskills.io format, MCP server, etc.).
+
+Plugins compose. Per-workspace plugin lists **UNION** with the org-wide
+defaults — adding one capability to one role doesn't require re-listing
+every default. Use `!plugin-name` to opt a specific default out.
+
+See [Plugins](/docs/plugins) for the full guide.
 
 ## Channels
 
-A **channel** wires a workspace to an external messaging surface:
-Telegram, Slack, Discord, email, webhooks. Once connected, the user can
-talk to the agent from outside the canvas — and the agent can broadcast
-back.
+A **channel** wires a workspace to an external messaging platform:
+
+| Adapter | Platform | Config |
+|---------|----------|--------|
+| `telegram` | Telegram | Bot token + chat_id allowlist |
+| `slack` | Slack | Workspace token + channel |
+| `lark` | Lark / Feishu | Custom Bot webhook + Event Subscriptions |
+
+Once connected, users can talk to agents from outside the canvas — and
+agents can broadcast back. Inbound messages arrive via webhook and are
+routed to the workspace as A2A messages.
+
+See [Channels](/docs/channels) for setup instructions.
 
 ## Schedules
 
 A **schedule** is a cron-driven recurring prompt. Each tick fires an A2A
-message into the workspace, which the agent treats as a new task. Every
-running schedule is supervised — panics in the dispatch path are
-recovered with exponential backoff, and a liveness watchdog surfaces
-stuck subsystems via `/admin/liveness`.
+message into the workspace, which the agent treats as a new task. Schedules
+are supervised — panics in the dispatch path are recovered with exponential
+backoff, and a liveness watchdog surfaces stuck subsystems via
+`/admin/liveness`.
 
-Schedules let you build the *evolution* loop alongside the *review*
-loop: hourly security audits, daily ecosystem watches, weekly plugin
-curation, etc.
+Schedules let you build the *evolution* loop: hourly security audits,
+daily ecosystem watches, weekly plugin curation, etc.
+
+See [Schedules](/docs/schedules) for the full guide.
+
+## Tokens
+
+**Bearer tokens** authenticate agents and API clients. Each token is
+scoped to a single workspace — a token from workspace A cannot access
+workspace B.
+
+- Issued on first registration (`POST /registry/register`)
+- Create/list/revoke via `GET/POST/DELETE /workspaces/:id/tokens`
+- 256-bit entropy, sha256-hashed in DB, plaintext shown once
+
+See [Token Management](/docs/tokens) for the full guide.
 
 ## The canvas
 
@@ -66,18 +105,19 @@ write, every scheduled fire, every status change pushes a WebSocket
 event in real time.
 
 The canvas isn't just a viewer — it's the operator surface. Drag nodes
-to reorganise, click to chat, watch the team work.
+to reorganise teams, click to chat, right-click for actions, watch the
+team work in real time.
 
 ## How they fit together
 
-A typical org definition looks like:
+A typical org definition:
 
 ```yaml
 org_name: My Team
 defaults:
   runtime: claude-code
   tier: 2
-  plugins: [ecc, molecule-dev, superpowers, molecule-careful-bash, ...]
+  plugins: [ecc, molecule-dev, superpowers, molecule-careful-bash]
   category_routing:
     security: [Backend Engineer]
     ui: [Frontend Engineer]
@@ -85,10 +125,10 @@ defaults:
 workspaces:
   - name: PM
     canvas: { x: 400, y: 50 }
-    plugins: [molecule-workflow-triage, molecule-workflow-retro]
+    plugins: [molecule-workflow-triage]
     channels:
       - type: telegram
-        config: { ... }
+        config: { bot_token: "${TELEGRAM_BOT_TOKEN}", chat_id: "12345" }
     children:
       - name: Dev Lead
         children:
@@ -100,6 +140,13 @@ workspaces:
                 prompt: "Run npm run typecheck and report any new errors..."
 ```
 
-That's the entire mental model. Templates → plugins → channels →
-schedules → canvas. Everything else in the docs is depth on one of
-these five.
+That's the mental model. Templates → plugins → channels → schedules →
+tokens → canvas. Everything else in the docs is depth on one of these
+primitives.
+
+## MCP integration
+
+Any MCP-compatible AI agent can manage Molecule AI workspaces using the
+[MCP Server](/docs/mcp-server) — 87 tools covering workspace CRUD,
+communication, secrets, memory, files, schedules, channels, plugins,
+and more. Install via `npx @molecule-ai/mcp-server`.

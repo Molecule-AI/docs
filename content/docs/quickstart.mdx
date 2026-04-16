@@ -9,28 +9,52 @@ using the bundled `molecule-dev` template.
 ## Prerequisites
 
 - Docker Desktop (or any Docker daemon) running locally
-- Go 1.25+ and Node 22+ if you want to build the platform from source
-- A Claude API key (`CLAUDE_CODE_OAUTH_TOKEN`) in your environment
+- Go 1.25+ and Node 20+ if building from source
+- An LLM API key (Claude, OpenRouter, or Gemini)
 
-## 1. Clone the monorepo
+## Option A: One-command start (recommended)
 
 ```bash
 git clone https://github.com/Molecule-AI/molecule-monorepo.git
 cd molecule-monorepo
+./scripts/dev-start.sh
 ```
 
-## 2. Boot the platform
+This starts everything: Postgres, Redis, Platform (Go on `:8080`), and
+Canvas (Next.js on `:3000`). Press `Ctrl-C` to stop all services.
+
+## Option B: Docker Compose
 
 ```bash
-docker compose up -d --build platform canvas
+git clone https://github.com/Molecule-AI/molecule-monorepo.git
+cd molecule-monorepo
+docker compose up -d
 ```
 
-This starts:
-- **platform** (Go API on `localhost:8080`)
-- **canvas** (Next.js 15 frontend on `localhost:3000`)
-- **postgres** + **redis** for state and pub/sub
+This starts the full stack including Langfuse (`:3001`) and Temporal (`:8233`).
 
-## 3. Import the dev template
+## Option C: Manual setup
+
+```bash
+# 1. Start infrastructure
+./infra/scripts/setup.sh    # Postgres, Redis, Langfuse, Temporal
+
+# 2. Start platform
+cd platform && go run ./cmd/server    # API on :8080
+
+# 3. Start canvas (new terminal)
+cd canvas && npm install && npm run dev    # UI on :3000
+```
+
+## 2. Open the canvas
+
+Navigate to [http://localhost:3000](http://localhost:3000). You should see
+the empty state with template cards.
+
+## 3. Deploy from a template
+
+Click any template card to deploy a workspace instantly. Or import a full
+org template:
 
 ```bash
 curl -X POST http://localhost:8080/org/import \
@@ -42,15 +66,10 @@ This provisions the 12-workspace dev team — PM, Research Lead and 3
 researchers, Dev Lead and 5 engineers, plus Security/QA/UIUX auditors —
 each as its own Docker container.
 
-## 4. Open the canvas
+## 4. Talk to PM
 
-Navigate to [http://localhost:3000](http://localhost:3000). You should
-see your team rendered as a tree of nodes. Click any node to chat with
-that agent directly.
-
-## 5. Talk to PM
-
-PM is the entry point. Send it a task:
+PM is the entry point. Click the PM node on the canvas, open the Chat tab,
+and send a task:
 
 > *"Add a 'Last seen' column to the user list table on the admin page."*
 
@@ -58,17 +77,40 @@ PM will break the request into specific assignments, fan them out to the
 right leads in parallel, verify the results, and report back when the
 work is shipped.
 
+## 5. Set up secrets
+
+Most agents need an LLM API key. Set it as a global secret so all
+workspaces inherit it:
+
+```bash
+curl -X PUT http://localhost:8080/settings/secrets \
+  -H 'Content-Type: application/json' \
+  -d '{"key":"ANTHROPIC_API_KEY","value":"sk-ant-..."}'
+```
+
+Or use the Settings panel (gear icon) in the canvas to manage secrets
+per workspace.
+
 ## What just happened
 
-You spun up a self-organising engineering team in one command. They're
-clones of real Claude Code agents — they can read your codebase, run
-tests, open PRs to GitHub. Their schedules (security audit, UX audit,
-template fitness checks) run hourly on their own.
+You spun up a self-organising engineering team. They're real agents — they
+can read your codebase, run tests, open PRs to GitHub. Their schedules
+(security audit, UX audit, template fitness checks) run hourly on their own.
+
+## Using the SaaS instead
+
+Don't want to self-host? Use the cloud platform directly:
+
+1. Go to [app.moleculesai.app](https://app.moleculesai.app)
+2. Sign up and create an organization
+3. Your tenant is provisioned at `<your-org>.moleculesai.app`
+4. Deploy agents from templates — same experience, zero infrastructure
 
 ## Next steps
 
-- Customise the [Org Template](/docs/org-template) to match your team's
-  actual structure.
-- Add [Plugins](/docs/plugins) to give specific roles new capabilities.
+- Customise the [Org Template](/docs/org-template) to match your team.
+- Add [Plugins](/docs/plugins) to give roles new capabilities.
 - Wire a [Channel](/docs/channels) so you can talk to PM from Telegram.
+- Connect your own agents with [External Agents](/docs/external-agents).
+- Generate [API Tokens](/docs/tokens) for programmatic access.
 - Read about the [Architecture](/docs/architecture) under the hood.

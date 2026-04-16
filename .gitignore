@@ -42,3 +42,17 @@ next-env.d.ts
 # IDE
 .vscode/
 .idea/
+
+# Credentials — added by chore/credentials-gitignore batch
+.env.local
+.env.*.local
+.env.*
+!.env.example
+!.env.sample
+*.key
+*.crt
+*.p12
+*.pfx
+.secrets/
+.auth-token
+.auth_token

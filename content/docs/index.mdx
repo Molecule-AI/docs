@@ -9,6 +9,16 @@ multi-agent organisations. You define your team in one YAML file
 talk on, schedule their recurring work — and the platform takes care of the
 rest.
 
+## Try it now
+
+| | |
+|---|---|
+| **Dashboard** | [app.moleculesai.app](https://app.moleculesai.app) — create orgs, deploy agents |
+| **API** | [api.moleculesai.app](https://api.moleculesai.app) — control plane REST API |
+| **Documentation** | [doc.moleculesai.app](https://doc.moleculesai.app) — you are here |
+| **Status** | [status.moleculesai.app](https://status.moleculesai.app) — uptime monitoring |
+| **Self-host** | [Self-Hosting Guide](/docs/self-hosting) — run on your own infrastructure |
+
 ## What you can build
 
 - **Self-running engineering teams** — PM, Dev Lead, frontend / backend / devops
@@ -19,23 +29,47 @@ rest.
   shared memory.
 - **Product orgs** — anything you can describe as a tree of roles and
   responsibilities.
+- **Hybrid teams** — mix cloud-hosted agents with [external agents](/docs/external-agents)
+  running on your own infrastructure, edge devices, or other clouds.
 
 ## How it works
 
 1. **Templates.** Describe your org as a YAML tree of workspaces. Each workspace
-  is a real container running an LLM agent. Templates ship with sensible
-  defaults so you can spin one up in one command.
+   is a real container running an LLM agent. Templates ship with sensible
+   defaults so you can spin one up in one command.
 2. **Plugins.** Add capabilities to one role or all of them — guardrails,
-  skills, slash commands, browser automation, MCP servers. Plugins compose;
-  per-role overrides UNION with the defaults.
-3. **Channels.** Connect any role to Telegram, Slack, email, or webhooks so
-  the user can talk to it directly.
-4. **Schedules.** Define recurring work in cron syntax. The runtime fires the
-  prompt at the scheduled time, supervised against panics with a liveness
-  watchdog so a single bad input can't silently kill the loop.
-5. **The canvas.** A live visualisation of your org — every workspace as a
-  node, every A2A message as an edge, every memory write tracked in real
-  time.
+   skills, slash commands, browser automation, MCP servers. Plugins compose;
+   per-role overrides UNION with the defaults.
+3. **Channels.** Connect any role to [Telegram, Slack, or Lark/Feishu](/docs/channels)
+   so users can talk to agents directly from their existing tools.
+4. **Schedules.** Define [recurring work](/docs/schedules) in cron syntax. The
+   runtime fires the prompt at the scheduled time, supervised against panics
+   with a liveness watchdog.
+5. **Tokens.** Generate [API tokens](/docs/tokens) per workspace for secure
+   authentication. Rotate, revoke, and audit from the dashboard or API.
+6. **The canvas.** A live visualisation of your org — every workspace as a
+   node, every A2A message as an edge, every memory write tracked in real time.
+
+## Eight runtime adapters
+
+| Runtime | Description |
+|---------|-------------|
+| Claude Code | Anthropic Claude with code execution |
+| LangGraph | LangChain ReAct agent with tools |
+| OpenClaw | Multi-file prompt system with SOUL |
+| CrewAI | Role-based agent with task delegation |
+| AutoGen | Microsoft conversable agents |
+| DeepAgents | Deep research with planning |
+| Hermes | NousResearch Hermes-3 multi-provider |
+| Gemini CLI | Google Gemini CLI workspace |
+
+## Integrate with everything
+
+- **[MCP Server](/docs/mcp-server)** — 87 tools for managing Molecule AI from any
+  MCP-compatible AI agent (Claude Code, Cursor, etc.)
+- **[Python SDK](https://pypi.org/project/molecule-ai-sdk)** — `pip install molecule-ai-sdk`
+- **[External Agents](/docs/external-agents)** — register any HTTP agent as a
+  first-class workspace
 
 ## Where to next
 
@@ -43,10 +77,7 @@ rest.
   agent in under five minutes.
 - Want the architecture tour? Start with [Concepts](/docs/concepts) and
   [Architecture](/docs/architecture).
-- Ready to build your own org? Jump straight to
-  [Org Templates](/docs/org-template).
-
-> This documentation is maintained automatically by the
-> Documentation Specialist agent in our own dogfood org. Every PR to the
-> platform repo triggers a docs sync. Spot something stale? Open an issue or
-> a PR — those signals reach the agent on its next cron tick.
+- Ready to build your own org? Jump to [Org Templates](/docs/org-template).
+- Want to connect your own agent? See [External Agents](/docs/external-agents).
+- Need API access? Check [Token Management](/docs/tokens) and the
+  [API Reference](/docs/api-reference).

@@ -1,11 +1,267 @@
 ---
 title: Plugins
-description: Stub page — content coming soon.
+description: Extend workspace capabilities with modular plugins — guardrails, skills, workflows.
 ---
 
-> 🚧 **Coming soon.** The Documentation Specialist agent will populate this
-> page on its next maintenance cycle.
+## Overview
 
-If you need this content urgently, open an issue on the
-[docs repo](https://github.com/Molecule-AI/docs/issues/new) and the agent
-will prioritise it on its next cron tick.
+Plugins are installable capability bundles that extend what a workspace can do.
+They range from ambient guardrails that enforce rules automatically, to
+on-demand skills invoked via the `Skill` tool, to workflow plugins that
+compose skills into slash commands.
+
+Plugins follow a **two-axis model**: the *source* (where the plugin comes from)
+is orthogonal to the *shape* (what format it takes). This means you can install
+a plugin from a local registry or from GitHub, and the workspace runtime
+figures out how to load it based on its shape.
+
+---
+
+## Two-Axis Model
+
+### Sources (where)
+
+| Scheme | Description | Example |
+|--------|-------------|---------|
+| `local://` | Platform's curated plugin registry (auto-discovered from the `plugins/` directory) | `local://molecule-careful-bash` |
+| `github://` | Public GitHub repo (shallow clone at install time) | `github://owner/repo` |
+| `github://` (pinned) | GitHub repo at a specific ref | `github://owner/repo#v1.2.0` |
+
+Use `GET /plugins/sources` to list all registered install-source schemes at
+runtime.
+
+### Shapes (what)
+
+| Shape | Description |
+|-------|-------------|
+| agentskills.io format | `SKILL.md` + optional scripts, hooks, and `plugin.yaml` manifest |
+| MCP server | Model Context Protocol server (coming soon for more runtimes) |
+
+The shape is orthogonal to the source. A `github://` plugin and a `local://`
+plugin can both be agentskills.io format. The per-runtime adapter inside the
+workspace handles loading at startup.
+
+---
+
+## Installing a Plugin
+
+```bash
+curl -X POST http://localhost:8080/workspaces/{id}/plugins \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {token}" \
+  -d '{"source": "local://molecule-careful-bash"}'
+```
+
+From GitHub:
+
+```bash
+curl -X POST http://localhost:8080/workspaces/{id}/plugins \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {token}" \
+  -d '{"source": "github://Molecule-AI/molecule-plugin-careful-bash"}'
+```
+
+The platform resolves the source, stages the plugin files, copies them into the
+workspace container at `/configs/plugins/<name>/`, and triggers an automatic
+workspace restart so the runtime picks up the new plugin.
+
+---
+
+## Uninstalling a Plugin
+
+```bash
+curl -X DELETE http://localhost:8080/workspaces/{id}/plugins/{name} \
+  -H "Authorization: Bearer {token}"
+```
+
+Uninstall removes the plugin directory, cleans up copied skill directories and
+rule markers from `CLAUDE.md`, and triggers an automatic workspace restart.
+
+---
+
+## Listing Plugins
+
+### Platform Registry
+
+List all available plugins in the platform registry:
+
+```bash
+# All plugins
+curl http://localhost:8080/plugins
+
+# Filtered by runtime
+curl http://localhost:8080/plugins?runtime=claude-code
+```
+
+Plugins with no declared `runtimes` field in their manifest are treated as
+"unspecified, try it" and included in filtered results.
+
+### Available for a Workspace
+
+Returns plugins filtered to those supported by the workspace's current runtime:
+
+```bash
+curl http://localhost:8080/workspaces/{id}/plugins/available \
+  -H "Authorization: Bearer {token}"
+```
+
+### Installed on a Workspace
+
+```bash
+curl http://localhost:8080/workspaces/{id}/plugins \
+  -H "Authorization: Bearer {token}"
+```
+
+Each installed plugin is annotated with whether it still supports the
+workspace's current runtime. This lets the canvas grey out plugins that went
+inert after a runtime change.
+
+---
+
+## Runtime Compatibility Check
+
+Before changing a workspace's runtime, check which installed plugins would
+become incompatible:
+
+```bash
+curl "http://localhost:8080/workspaces/{id}/plugins/compatibility?runtime=langgraph" \
+  -H "Authorization: Bearer {token}"
+```
+
+Response:
+
+```json
+{
+  "target_runtime": "langgraph",
+  "compatible": [...],
+  "incompatible": [...],
+  "all_compatible": false
+}
+```
+
+The canvas uses this to show a confirmation dialog before applying a runtime
+change.
+
+---
+
+## Built-in Plugins
+
+### Hook Plugins (ambient enforcement)
+
+These fire automatically via the harness layer. No explicit invocation needed.
+
+| Plugin | Purpose |
+|--------|---------|
+| `molecule-careful-bash` | Refuses `git push --force` to main, `rm -rf` at root, `DROP TABLE` against prod schema. Ships the `careful-mode` skill as documentation. |
+| `molecule-freeze-scope` | Locks edits to a single path glob via `.claude/freeze`. Useful while debugging. |
+| `molecule-audit-trail` | Appends every Edit/Write to `.claude/audit.jsonl` for accountability. |
+| `molecule-session-context` | Auto-loads recent cron-learnings and open PR/issue counts at session start. |
+| `molecule-prompt-watchdog` | Injects warning context when the prompt mentions destructive keywords. |
+
+### Skill Plugins (on-demand)
+
+Invoked explicitly via the `Skill` tool during a conversation.
+
+| Plugin | Purpose |
+|--------|---------|
+| `molecule-skill-code-review` | 16-criteria multi-axis code review rubric. |
+| `molecule-skill-cross-vendor-review` | Adversarial second-model review for noteworthy PRs. |
+| `molecule-skill-llm-judge` | Score whether a deliverable addresses the original request. |
+| `molecule-skill-update-docs` | Sync repo docs after merges. |
+| `molecule-skill-cron-learnings` | Defines the operational-memory JSONL format. |
+
+### Workflow Plugins (slash commands)
+
+Compose skills into repeatable multi-step workflows.
+
+| Plugin | Command | Purpose |
+|--------|---------|---------|
+| `molecule-workflow-triage` | `/triage` | Full PR-triage cycle (gates 1-7 + code-review + merge if green). |
+| `molecule-workflow-retro` | `/retro` | Weekly retrospective issue. |
+
+### Shared Plugins
+
+Loaded by default from the `plugins/` directory at the repo root.
+
+| Plugin | Purpose |
+|--------|---------|
+| `molecule-dev` | Codebase conventions (rules injected into CLAUDE.md) + `review-loop` skill. |
+| `superpowers` | `verification-before-completion`, `test-driven-development`, `systematic-debugging`, `writing-plans`. |
+| `ecc` | General Claude Code guardrails. |
+| `browser-automation` | Puppeteer/CDP-based web scraping and live canvas screenshots. Opt-in per workspace. |
+
+---
+
+## Org Template Plugin Resolution
+
+When deploying an org template, per-workspace `plugins:` lists in `org.yaml`
+role overrides **UNION** with `defaults.plugins` (deduplicated, defaults first).
+They do not replace them.
+
+To opt a specific default out for a given role or workspace, prefix the plugin
+name with `!` or `-`:
+
+```yaml
+defaults:
+  plugins:
+    - molecule-careful-bash
+    - molecule-audit-trail
+    - superpowers
+
+workspaces:
+  researcher:
+    role: "Research Analyst"
+    plugins:
+      - browser-automation       # added on top of defaults
+      - "!superpowers"           # opted out of superpowers
+```
+
+Result for the `researcher` workspace:
+`molecule-careful-bash`, `molecule-audit-trail`, `browser-automation`
+
+---
+
+## Install Safeguards
+
+Environment variables that bound the cost of a single plugin install:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PLUGIN_INSTALL_BODY_MAX_BYTES` | `65536` (64 KiB) | Max request body size |
+| `PLUGIN_INSTALL_FETCH_TIMEOUT` | `5m` | Whole fetch + copy deadline |
+| `PLUGIN_INSTALL_MAX_DIR_BYTES` | `104857600` (100 MiB) | Max staged-tree size |
+
+These prevent a slow or malicious source from tying up a handler goroutine or
+exhausting disk space.
+
+---
+
+## Plugin Download (External Workspaces)
+
+External workspaces (those running outside Docker) can pull plugins as gzipped
+tarballs:
+
+```bash
+curl http://localhost:8080/workspaces/{id}/plugins/{name}/download \
+  -H "Authorization: Bearer {token}" \
+  -o plugin.tar.gz
+```
+
+An optional `?source=github://owner/repo` query parameter lets external
+workspaces pull from upstream repos without the platform pre-staging them.
+Defaults to `local://<name>` when omitted.
+
+---
+
+## API Reference
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/plugins` | List plugin registry (supports `?runtime=` filter) |
+| GET | `/plugins/sources` | List registered install-source schemes |
+| GET | `/workspaces/:id/plugins` | List installed plugins |
+| POST | `/workspaces/:id/plugins` | Install a plugin (`{"source": "scheme://spec"}`) |
+| DELETE | `/workspaces/:id/plugins/:name` | Uninstall a plugin |
+| GET | `/workspaces/:id/plugins/available` | Available plugins filtered by workspace runtime |
+| GET | `/workspaces/:id/plugins/compatibility?runtime=X` | Preflight runtime-change compatibility check |
+| GET | `/workspaces/:id/plugins/:name/download` | Download plugin as tarball (external workspaces) |

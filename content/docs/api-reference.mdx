@@ -1,11 +1,423 @@
 ---
-title: Api Reference
-description: Stub page — content coming soon.
+title: API Reference
+description: Complete reference for all Molecule AI Platform HTTP and WebSocket endpoints.
 ---
 
-> 🚧 **Coming soon.** The Documentation Specialist agent will populate this
-> page on its next maintenance cycle.
+# API Reference
 
-If you need this content urgently, open an issue on the
-[docs repo](https://github.com/Molecule-AI/docs/issues/new) and the agent
-will prioritise it on its next cron tick.
+The Molecule AI Platform exposes a REST API (default port 8080) for workspace management, agent registry, communication, and administration. All endpoints return JSON unless otherwise noted.
+
+**Base URL:** `http://localhost:8080` (self-hosted) or `https://api.moleculesai.app` (SaaS)
+
+---
+
+## Authentication Model
+
+The platform uses three authentication middleware variants depending on the sensitivity of the route.
+
+### AdminAuth
+
+Strict bearer-token authentication. Required for any route where a forged request could leak prompts/memory, create/mutate workspaces, or leak operational data.
+
+```
+Authorization: Bearer <token>
+```
+
+**Fail-open behavior:** When no live tokens exist globally (fresh install), AdminAuth passes all requests through. Once the first token is created, all AdminAuth routes require a valid bearer.
+
+### WorkspaceAuth
+
+Per-workspace bearer token binding. Workspace A's token cannot access workspace B's sub-routes. Used for the entire `/workspaces/:id/*` group (except the A2A proxy, which uses `CanCommunicate`).
+
+```
+Authorization: Bearer <workspace-token>
+```
+
+### CanvasOrBearer
+
+Accepts either a valid bearer token OR a request whose `Origin` header matches `CORS_ORIGINS`. Used only for cosmetic-only routes where a forged request has zero data/security impact.
+
+Currently applies only to `PUT /canvas/viewport`. Do not extend to data-sensitive routes.
+
+---
+
+## Health and Monitoring
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/health` | None | Returns `200 OK` if the platform is running. Use for load balancer health checks. |
+| GET | `/metrics` | None | Prometheus text format (v0.0.4) metrics. Scrape-safe, no auth required. |
+| GET | `/admin/liveness` | AdminAuth | Per-subsystem `supervised.Snapshot()` ages. Check before debugging stuck scheduler/heartbeat goroutines. |
+
+---
+
+## Workspaces
+
+Core workspace CRUD and lifecycle operations.
+
+### CRUD
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/workspaces` | AdminAuth | Create a new workspace. Accepts `name`, `runtime`, `template`, `parent_id`, `tier`, `workspace_dir`, and other fields. Runtime is auto-detected from template config if omitted (defaults to `langgraph`). |
+| GET | `/workspaces` | AdminAuth | List all workspaces with status, runtime, agent card, position, and hierarchy info. |
+| GET | `/workspaces/:id` | WorkspaceAuth | Get a single workspace by ID. |
+| PATCH | `/workspaces/:id` | WorkspaceAuth | Update workspace fields. **Field-level authz:** cosmetic fields (name, role, x, y, canvas) pass through; sensitive fields (tier, parent_id, runtime, workspace_dir) require a valid bearer token when any live token exists. |
+| DELETE | `/workspaces/:id` | AdminAuth | Delete a workspace. Stops the container, revokes all auth tokens, and removes all associated data. |
+
+### Lifecycle
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/workspaces/:id/restart` | WorkspaceAuth | Restart the workspace container. Sends a `restart_context` A2A message after successful re-registration. |
+| POST | `/workspaces/:id/pause` | WorkspaceAuth | Stop the container and set status to `paused`. Paused workspaces skip health sweep, liveness monitor, and auto-restart. |
+| POST | `/workspaces/:id/resume` | WorkspaceAuth | Re-provision a paused workspace. Status transitions to `provisioning`. |
+
+---
+
+## Registry
+
+Workspace registration and heartbeat endpoints. Called by workspace runtimes, not by end users.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/registry/register` | None | Register a workspace with the platform. Sets status to `online`. Body includes agent URL, agent card, capabilities. |
+| POST | `/registry/heartbeat` | Bearer (if token exists) | Send a heartbeat. Updates Redis TTL key (60s expiry). Body can include `active_tasks`, `current_task`, `error_rate`. Triggers `degraded` status if `error_rate > 0.5`. |
+| POST | `/registry/update-card` | Bearer (if token exists) | Update the workspace's agent card (name, description, skills, etc.). |
+
+---
+
+## Discovery
+
+Peer discovery and access control verification.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/registry/discover/:id` | Bearer + `X-Workspace-ID` | Discover a workspace's agent card and URL. Requires caller identification. Fails open on DB hiccup since hierarchy check is primary. |
+| GET | `/registry/:id/peers` | Bearer + `X-Workspace-ID` | List all peers (siblings, parent, children) that the caller can communicate with. |
+| POST | `/registry/check-access` | None | Check whether two workspaces can communicate. Body: `{ "caller_id": "...", "target_id": "..." }`. Returns `{ "allowed": true/false }`. |
+
+---
+
+## Communication
+
+### A2A Proxy
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/workspaces/:id/a2a` | CanCommunicate | Proxy an A2A JSON-RPC message to the target workspace. Caller identified via `X-Workspace-ID` header. Canvas requests (no header) bypass access check. On connection error, checks if container is dead and triggers auto-restart. |
+
+### Delegation
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/workspaces/:id/delegate` | WorkspaceAuth | Async fire-and-forget delegation. Supports idempotency keys. Body includes target workspace, prompt, and metadata. |
+| GET | `/workspaces/:id/delegations` | WorkspaceAuth | List delegation status for a workspace. Returns delegation rows with status, result, timestamps. |
+
+---
+
+## Configuration
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/config` | WorkspaceAuth | Get the workspace's `config.yaml` contents. |
+| PATCH | `/workspaces/:id/config` | WorkspaceAuth | Update the workspace config. "Save & Restart" writes config and auto-restarts; "Save" writes only and shows a restart banner in the Canvas. |
+
+---
+
+## Secrets
+
+### Per-Workspace Secrets
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/secrets` | WorkspaceAuth | List secret keys for a workspace (keys only, values masked). |
+| POST | `/workspaces/:id/secrets` | WorkspaceAuth | Set a secret `{ "key": "...", "value": "..." }`. Auto-restarts the workspace. |
+| PUT | `/workspaces/:id/secrets` | WorkspaceAuth | Alias for POST (upsert semantics). Auto-restarts the workspace. |
+| DELETE | `/workspaces/:id/secrets/:key` | WorkspaceAuth | Delete a secret by key. Auto-restarts the workspace. |
+| GET | `/workspaces/:id/model` | WorkspaceAuth | Return the model configuration derived from available API keys (which provider keys are set). |
+
+### Global Secrets
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/settings/secrets` | AdminAuth | List global secrets (keys only, values masked). |
+| PUT | `/settings/secrets` | AdminAuth | Set a global secret `{ "key": "...", "value": "..." }`. Auto-restarts every non-paused/non-removed workspace that does not shadow the key with a workspace-level override. |
+| POST | `/settings/secrets` | AdminAuth | Alias for PUT. |
+| DELETE | `/settings/secrets/:key` | AdminAuth | Delete a global secret. Same auto-restart fan-out as PUT. |
+
+Legacy aliases `GET/POST/DELETE /admin/secrets[/:key]` also exist and behave identically.
+
+---
+
+## Memory
+
+### Key-Value Memory
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/memory` | WorkspaceAuth | List all key-value memory entries for a workspace. |
+| POST | `/workspaces/:id/memory` | WorkspaceAuth | Set a memory entry `{ "key": "...", "value": "..." }`. |
+| DELETE | `/workspaces/:id/memory/:key` | WorkspaceAuth | Delete a memory entry by key. |
+
+### Agent Memories (HMA-scoped)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/memories` | WorkspaceAuth | List agent memories for a workspace. |
+| POST | `/workspaces/:id/memories` | WorkspaceAuth | Create an agent memory entry. |
+| DELETE | `/workspaces/:id/memories/:id` | WorkspaceAuth | Delete an agent memory by ID. |
+
+---
+
+## Files
+
+Workspace file management. Files are stored in the workspace's config directory.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/files` | WorkspaceAuth | List files in the workspace config directory. |
+| GET | `/workspaces/:id/files/*path` | WorkspaceAuth | Read a specific file. |
+| PUT | `/workspaces/:id/files/*path` | WorkspaceAuth | Write a file. Creates parent directories as needed. |
+| DELETE | `/workspaces/:id/files/*path` | WorkspaceAuth | Delete a file. |
+| GET | `/workspaces/:id/shared-context` | WorkspaceAuth | Get the shared context files for a workspace (aggregated from parent hierarchy). |
+
+---
+
+## Activity
+
+Activity logging and search for A2A communications, task updates, and agent logs.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/activity` | WorkspaceAuth | List activity logs for a workspace. Supports `?source=canvas` or `?source=agent` filter. |
+| POST | `/workspaces/:id/activity` | WorkspaceAuth | Log an activity entry (used by workspace runtimes to self-report). |
+| POST | `/workspaces/:id/notify` | WorkspaceAuth | Agent-to-user push message via WebSocket. Delivers a notification to connected Canvas clients. |
+
+### Session Search
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/session-search` | WorkspaceAuth | Search activity logs with filters for type, date range, and text content. Returns paginated results. |
+
+---
+
+## Schedules
+
+Cron-based scheduled tasks per workspace.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/schedules` | WorkspaceAuth | List all schedules for a workspace. |
+| POST | `/workspaces/:id/schedules` | WorkspaceAuth | Create a schedule. Body: `{ "expression": "0 */6 * * *", "timezone": "UTC", "prompt": "...", "enabled": true }`. |
+| PATCH | `/workspaces/:id/schedules/:scheduleId` | WorkspaceAuth | Update a schedule (expression, timezone, prompt, enabled). |
+| DELETE | `/workspaces/:id/schedules/:scheduleId` | WorkspaceAuth | Delete a schedule. |
+| POST | `/workspaces/:id/schedules/:scheduleId/run` | WorkspaceAuth | Manually trigger a schedule immediately. |
+| GET | `/workspaces/:id/schedules/:scheduleId/history` | WorkspaceAuth | List past runs for a schedule. Includes status (`success`, `error`, `skipped`) and `error_detail`. |
+
+Schedule `source` field: `template` for org/import-seeded schedules, `runtime` for Canvas/API-created. The `last_status` includes `skipped` when the scheduler concurrency-aware-skips a busy workspace.
+
+---
+
+## Channels
+
+Social channel integrations (Telegram, Slack, etc.) for workspace agents.
+
+### Per-Workspace Channels
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/channels` | WorkspaceAuth | List channels for a workspace. |
+| POST | `/workspaces/:id/channels` | WorkspaceAuth | Create a channel. Body includes platform type, JSONB config, and allowlist. |
+| PATCH | `/workspaces/:id/channels/:channelId` | WorkspaceAuth | Update a channel's config or allowlist. |
+| DELETE | `/workspaces/:id/channels/:channelId` | WorkspaceAuth | Delete a channel. |
+| POST | `/workspaces/:id/channels/:channelId/send` | WorkspaceAuth | Send an outbound message through the channel. |
+| POST | `/workspaces/:id/channels/:channelId/test` | WorkspaceAuth | Test the channel connection (send a test message). |
+
+### Global Channel Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/channels/adapters` | None | List available social platform adapters (Telegram, Slack, etc.). |
+| POST | `/channels/discover` | AdminAuth | Auto-detect available chats/groups for a bot token. |
+| POST | `/webhooks/:type` | None | Incoming webhook endpoint for social platforms. The `:type` parameter identifies the platform (e.g., `telegram`, `slack`). |
+
+---
+
+## Plugins
+
+Plugin registry and per-workspace plugin management.
+
+### Global Plugin Registry
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/plugins` | None | List all plugins in the registry. Supports `?runtime=` filter to show only compatible plugins. |
+| GET | `/plugins/sources` | None | List registered install-source schemes (e.g., `github://`, `local://`). |
+
+### Per-Workspace Plugins
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/plugins` | WorkspaceAuth | List installed plugins for a workspace. |
+| POST | `/workspaces/:id/plugins` | WorkspaceAuth | Install a plugin. Body: `{ "source": "github://org/repo" }`. Safeguards: 64 KiB body limit, 5 min fetch timeout, 100 MiB max staged-tree. |
+| DELETE | `/workspaces/:id/plugins/:name` | WorkspaceAuth | Uninstall a plugin by name. |
+| GET | `/workspaces/:id/plugins/available` | WorkspaceAuth | List plugins available for this workspace (filtered by workspace runtime). |
+| GET | `/workspaces/:id/plugins/compatibility` | WorkspaceAuth | Preflight runtime-change check. Query: `?runtime=X`. Returns which currently-installed plugins would be incompatible with the target runtime. |
+
+---
+
+## Auth Tokens
+
+Bearer token management for workspaces.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/tokens` | WorkspaceAuth | List active tokens for a workspace (token values are masked). |
+| POST | `/workspaces/:id/tokens` | WorkspaceAuth | Create a new bearer token for the workspace. |
+| DELETE | `/workspaces/:id/tokens/:tokenId` | WorkspaceAuth | Revoke a specific token. |
+
+### Test Token (Development Only)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/admin/workspaces/:id/test-token` | None | Mint a fresh bearer token for E2E scripts. Returns 404 unless `MOLECULE_ENV != production` or `MOLECULE_ENABLE_TEST_TOKENS=1`. |
+
+---
+
+## Teams
+
+Expand and collapse team views in the Canvas hierarchy.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/workspaces/:id/expand` | WorkspaceAuth | Expand a team workspace to show its children on the canvas. |
+| POST | `/workspaces/:id/collapse` | WorkspaceAuth | Collapse a team workspace to hide its children. |
+
+---
+
+## Templates and Bundles
+
+### Templates
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/templates` | None | List available workspace templates with their runtime, description, and config schema. |
+| POST | `/templates/import` | AdminAuth | Import a workspace template from a `github://` source URL. |
+
+### Org Templates
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/org/templates` | None | List available organization templates. |
+| POST | `/org/import` | AdminAuth | Import an org template. Applies `resolveInsideRoot` path sanitization. Creates the full workspace hierarchy defined in `org.yaml`. |
+
+### Bundles
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/bundles/export/:id` | AdminAuth | Export a workspace (or workspace tree) as a portable bundle. Includes config, secrets (keys only), memory, schedules, and hierarchy. |
+| POST | `/bundles/import` | AdminAuth | Import a previously-exported bundle. Recreates the workspace tree with all associated data. |
+
+---
+
+## Approvals
+
+Human-in-the-loop approval system for agent actions.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/workspaces/:id/approvals` | WorkspaceAuth | Create an approval request. Body includes the action description, metadata, and options. |
+| GET | `/workspaces/:id/approvals` | WorkspaceAuth | List approval requests for a workspace. |
+| POST | `/workspaces/:id/approvals/:id/decide` | WorkspaceAuth | Approve or reject an approval request. Body: `{ "decision": "approve" }` or `{ "decision": "reject" }`. |
+| GET | `/approvals/pending` | AdminAuth | List all pending approval requests across all workspaces. |
+
+---
+
+## Canvas
+
+Canvas viewport persistence (cosmetic only).
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/canvas/viewport` | None | Get the saved canvas viewport (zoom, pan position). Open endpoint for bootstrap-friendliness. |
+| PUT | `/canvas/viewport` | CanvasOrBearer | Save the canvas viewport. Accepts bearer OR matching `Origin` header. Worst case on forgery: viewport corruption, recovered by page refresh. |
+
+---
+
+## Traces
+
+LLM trace retrieval from Langfuse.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/traces` | WorkspaceAuth | List LLM traces for a workspace from Langfuse. |
+
+---
+
+## Events
+
+Append-only event log for structure changes.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/events` | AdminAuth | List all structure events across all workspaces. |
+| GET | `/events/:workspaceId` | AdminAuth | List structure events for a specific workspace. |
+
+---
+
+## Terminal
+
+WebSocket-based terminal access to workspace containers.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| WS | `/workspaces/:id/terminal` | WorkspaceAuth | Open a WebSocket terminal session to the workspace container. Provides interactive shell access. |
+
+---
+
+## WebSocket
+
+Real-time event streaming for Canvas clients.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| WS | `/ws` | None | Connect to the WebSocket hub. Receives all structure events (`WORKSPACE_ONLINE`, `WORKSPACE_OFFLINE`, `HEARTBEAT`, `CONFIG_UPDATED`, `A2A_RESPONSE`, `AGENT_MESSAGE`, etc.). Canvas clients connect here for real-time updates. |
+
+---
+
+## Error Responses
+
+All endpoints return standard HTTP status codes:
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Success |
+| 201 | Created |
+| 400 | Bad request (malformed body, missing required fields) |
+| 401 | Unauthorized (missing or invalid bearer token) |
+| 403 | Forbidden (valid token but insufficient access) |
+| 404 | Not found (workspace, schedule, channel, etc. does not exist) |
+| 409 | Conflict (idempotency key collision on delegation) |
+| 429 | Rate limited (exceeds `RATE_LIMIT` requests/min) |
+| 500 | Internal server error |
+
+Error response body format:
+
+```json
+{
+  "error": "human-readable error message"
+}
+```
+
+---
+
+## Rate Limiting
+
+All endpoints are subject to a global rate limit of `RATE_LIMIT` requests per minute (default: 600). When exceeded, the platform returns `429 Too Many Requests` with a `Retry-After` header.
+
+---
+
+## CORS
+
+The platform sets CORS headers based on the `CORS_ORIGINS` environment variable (comma-separated list, default: `http://localhost:3000,http://localhost:3001`). Preflight (`OPTIONS`) requests are handled automatically by the Gin CORS middleware.

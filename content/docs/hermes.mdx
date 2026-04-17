@@ -187,9 +187,53 @@ Both workers receive correctly formatted messages through their native paths. No
 
 ---
 
+## Advanced: stacked system messages
+
+[NousResearch Hermes 4](https://hermes4.nousresearch.com) works best when persona, tool context, and reasoning policy are sent as **separate** `{"role": "system"}` entries rather than one concatenated string. `HermesA2AExecutor` supports this via the `system_blocks` kwarg (PR #499).
+
+### Usage
+
+```python
+from workspace_template.executors.hermes_a2a_executor import HermesA2AExecutor
+
+executor = HermesA2AExecutor(
+    system_blocks=[
+        "You are a senior security auditor. Be terse and precise.",   # persona
+        "You have access to bash, file search, and grep tools.",       # tools context
+        "Think step-by-step before concluding. Cite evidence.",        # reasoning policy
+    ]
+)
+```
+
+The executor emits each non-empty, non-`None` block as a separate `{"role": "system"}` message in the recommended order: **persona → tools context → reasoning policy**.
+
+### Behaviour
+
+| Condition | Result |
+|-----------|--------|
+| `system_blocks` is set | Emits one `{"role": "system"}` per non-empty block; `system_prompt` is ignored |
+| Entry is `None` or `""` | Silently skipped |
+| All entries empty | Zero system messages emitted |
+| `system_blocks` not set (`None`) | Falls back to the legacy `system_prompt` path — **fully backward-compatible** |
+
+### Backward compatibility
+
+Callers that pass a single `system_prompt` string are **unaffected**:
+
+```python
+# Legacy path — still works, no changes required
+executor = HermesA2AExecutor(
+    system_prompt="You are a security auditor. Think step-by-step."
+)
+```
+
+Only set `system_blocks` when you want fine-grained control over block ordering or need to inject tool manifests into a dedicated block.
+
+---
+
 ## Capability table
 
-### Shipped (Phases 2a + 2b + 2c — all merged to main)
+### Shipped (Phases 2a + 2b + 2c + PR #499 — all merged to main)
 
 | Capability | OpenAI-compat shim | Anthropic native | Gemini native |
 |---|---|---|---|
@@ -197,6 +241,7 @@ Both workers receive correctly formatted messages through their native paths. No
 | Multi-turn history | ⚠️ flattened into one user blob | ✅ role-attributed turns | ✅ `role: "model"` + `parts` wrapper |
 | Correct Gemini wire format | ❌ wrong role, missing parts | — | ✅ |
 | No compat-shim translation overhead | ❌ every request translated | ✅ | ✅ |
+| Stacked system messages (`system_blocks`) | ❌ | ✅ | ✅ |
 
 ### Roadmap — Phase 2d (not yet shipped)
 

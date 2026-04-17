@@ -20,6 +20,8 @@
     "troubleshooting",
     "---Runtimes---",
     "google-adk",
-    "hermes"
+    "hermes",
+    "---Integrations---",
+    "opencode"
   ]
 }

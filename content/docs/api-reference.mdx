@@ -212,6 +212,34 @@ Activity logging and search for A2A communications, task updates, and agent logs
 
 ---
 
+## Workflow Checkpoints
+
+Step-level progress persistence for long-running Temporal workflows. Workspaces with `runtime: langgraph` (Temporal) automatically save a checkpoint after each of the three workflow stages (`task_receive`, `llm_call`, `task_complete`) and resume from the last completed stage on restart.
+
+<Callout type="info">
+  **Automatic resume behavior (runtime: langgraph only)**
+
+  When a Temporal workspace restarts mid-workflow, the runtime reads the highest-index checkpoint and sets `resume_from_step` accordingly. Already-completed stages are skipped — the agent picks up exactly where it left off without re-running earlier steps.
+
+  Checkpoint I/O is non-fatal: network errors are silently swallowed. A crashed or unreachable platform never prevents the agent from running.
+</Callout>
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/workspaces/:id/checkpoints` | WorkspaceAuth | Upsert a step checkpoint. Body: `{ "workflow_id": "...", "step_name": "task_receive\|llm_call\|task_complete", "step_index": 0, "payload": {...} }`. Uses `ON CONFLICT DO UPDATE` — safe to call multiple times. |
+| GET | `/workspaces/:id/checkpoints/:wfid` | WorkspaceAuth | Return all checkpoints for a workflow, ordered by `step_index DESC`. Returns 404 if no checkpoints exist for the workflow. |
+| DELETE | `/workspaces/:id/checkpoints/:wfid` | WorkspaceAuth | Clear all checkpoints for a workflow. Called by the runtime on clean task completion. Returns 404 if none exist. |
+
+**Step names and indices:**
+
+| Step | `step_index` | Meaning |
+|------|-------------|---------|
+| `task_receive` | 0 | Task received from A2A message |
+| `llm_call` | 1 | LLM inference completed |
+| `task_complete` | 2 | Task result sent back to caller |
+
+---
+
 ## Schedules
 
 Cron-based scheduled tasks per workspace.

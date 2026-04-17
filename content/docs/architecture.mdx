@@ -111,6 +111,7 @@ The shared runtime provides the base agent infrastructure: A2A server, heartbeat
 | DeepAgents | `molecule-ai-workspace-template-deepagents` | deepagents |
 | Hermes | `molecule-ai-workspace-template-hermes` | openai, anthropic, google-genai |
 | Gemini CLI | `molecule-ai-workspace-template-gemini-cli` | @google/gemini-cli (npm) |
+| [Google ADK](/docs/google-adk) | `molecule-ai-workspace-template-google-adk` | google-adk>=1.0.0 |
 
 Each adapter repo has its own `Dockerfile` that installs `molecule-ai-workspace-runtime` from PyPI plus adapter-specific dependencies. Templates are cloned at Docker build time into the platform image via `manifest.json`.
 

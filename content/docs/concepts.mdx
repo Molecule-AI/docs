@@ -108,6 +108,38 @@ The canvas isn't just a viewer — it's the operator surface. Drag nodes
 to reorganise teams, click to chat, right-click for actions, watch the
 team work in real time.
 
+### A2A Topology Overlay
+
+The canvas renders **live delegation edges** on top of the workspace graph.
+When one agent delegates to another, a directed edge appears:
+
+- **Animated violet** — delegation occurred within the last 5 minutes
+- **Static blue** — delegation occurred earlier
+
+The overlay polls `GET /workspaces/:id/activity?type=delegation` for every
+visible node every 60 seconds. Toggle it on/off with the **A2A** button in
+the toolbar (⊞ mesh icon) — the setting persists across page loads.
+
+### Audit Trail Panel
+
+Every workspace's **Side Panel → Audit** tab (⊟ ledger icon) shows the
+workspace's tamper-evident audit ledger via `GET /workspaces/:id/audit`.
+Each entry records what happened (event type, actor, outcome) and whether
+its hash chain is intact.
+
+| Event type | Colour | Meaning |
+|-----------|--------|---------|
+| `delegation` | Blue | An A2A delegation was made or received |
+| `decision` | Violet | A gate or approval decision was recorded |
+| `gate` | Yellow | A HITL or automated gate was evaluated |
+| `hitl` | Orange | A human-in-the-loop approval request |
+
+Entries with `chain_valid: false` display a red ⚠ tamper indicator —
+investigate immediately; the audit chain may have been modified offline.
+
+Use the event-type filter bar at the top of the panel to narrow results.
+Click **Load more** to paginate (cursor-based, 50 entries per page).
+
 ## How they fit together
 
 A typical org definition:

@@ -200,9 +200,49 @@ Activity logging and search for A2A communications, task updates, and agent logs
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/workspaces/:id/activity` | WorkspaceAuth | List activity logs for a workspace. Supports `?source=canvas` or `?source=agent` filter. |
+| GET | `/workspaces/:id/activity` | WorkspaceAuth | List activity logs for a workspace. Supports `?source=canvas` or `?source=agent` filter, and `?type=delegation` for A2A topology overlay polling. |
 | POST | `/workspaces/:id/activity` | WorkspaceAuth | Log an activity entry (used by workspace runtimes to self-report). |
 | POST | `/workspaces/:id/notify` | WorkspaceAuth | Agent-to-user push message via WebSocket. Delivers a notification to connected Canvas clients. |
+
+---
+
+## Audit Ledger
+
+Tamper-evident audit trail for workspace events. Used by the Canvas Audit Trail panel.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/audit` | WorkspaceAuth | List audit entries for a workspace. Supports `?event_type=delegation\|decision\|gate\|hitl`, `?cursor=<cursor>`, and `?limit=<n>` (default 50). |
+
+### Audit entry schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique entry ID |
+| `event_type` | string | `delegation`, `decision`, `gate`, or `hitl` |
+| `actor` | string | Workspace ID that generated the event |
+| `summary` | string | Human-readable event description |
+| `chain_valid` | bool | `false` if the entry's hash does not match the prior chain — indicates possible tampering |
+| `created_at` | string (ISO 8601) | Event timestamp |
+| `cursor` | string \| null | Opaque pagination cursor; `null` when there are no more entries |
+
+Example response:
+
+```json
+{
+  "entries": [
+    {
+      "id": "aud_xyz789",
+      "event_type": "delegation",
+      "actor": "ws_abc123",
+      "summary": "Delegated task 'fix CI' to Backend Engineer",
+      "chain_valid": true,
+      "created_at": "2026-04-17T14:05:00Z"
+    }
+  ],
+  "cursor": "eyJpZCI6ImF1ZF94eXo3ODkifQ"
+}
+```
 
 ### Session Search
 

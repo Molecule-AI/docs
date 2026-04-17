@@ -24,8 +24,8 @@ figures out how to load it based on its shape.
 | Scheme | Description | Example |
 |--------|-------------|---------|
 | `local://` | Platform's curated plugin registry (auto-discovered from the `plugins/` directory) | `local://molecule-careful-bash` |
-| `github://` | Public GitHub repo (shallow clone at install time) | `github://owner/repo` |
-| `github://` (pinned) | GitHub repo at a specific ref | `github://owner/repo#v1.2.0` |
+| `github://` (pinned) | GitHub repo at a specific tag or commit SHA — **required for all installs** | `github://owner/repo#v1.2.0` |
+| `github://` (SHA) | Pin to an exact immutable commit | `github://owner/repo#abc1234` |
 
 Use `GET /plugins/sources` to list all registered install-source schemes at
 runtime.
@@ -52,14 +52,18 @@ curl -X POST http://localhost:8080/workspaces/{id}/plugins \
   -d '{"source": "local://molecule-careful-bash"}'
 ```
 
-From GitHub:
+From GitHub (pinned ref required):
 
 ```bash
 curl -X POST http://localhost:8080/workspaces/{id}/plugins \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer {token}" \
-  -d '{"source": "github://Molecule-AI/molecule-plugin-careful-bash"}'
+  -d '{"source": "github://Molecule-AI/molecule-plugin-careful-bash#v1.0.0"}'
 ```
+
+<Callout type="warn">
+  **Pinned refs are required.** `github://owner/repo` without a `#tag` or `#sha` suffix returns **HTTP 422 Unprocessable Entity**. Always pin to a specific tag (e.g. `#v1.0.0`) or commit SHA (e.g. `#abc1234`). See [Supply Chain Security](#supply-chain-security) for details and the escape hatch.
+</Callout>
 
 The platform resolves the source, stages the plugin files, copies them into the
 workspace container at `/configs/plugins/<name>/`, and triggers an automatic
@@ -223,16 +227,58 @@ Result for the `researcher` workspace:
 
 ## Install Safeguards
 
-Environment variables that bound the cost of a single plugin install:
+Environment variables that bound the cost and security of a single plugin install:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PLUGIN_INSTALL_BODY_MAX_BYTES` | `65536` (64 KiB) | Max request body size |
 | `PLUGIN_INSTALL_FETCH_TIMEOUT` | `5m` | Whole fetch + copy deadline |
 | `PLUGIN_INSTALL_MAX_DIR_BYTES` | `104857600` (100 MiB) | Max staged-tree size |
+| `PLUGIN_ALLOW_UNPINNED` | _(unset)_ | Set to `true` to allow bare `github://owner/repo` refs without a tag or SHA. **Development use only — never set in production.** |
 
 These prevent a slow or malicious source from tying up a handler goroutine or
 exhausting disk space.
+
+---
+
+## Supply Chain Security
+
+The platform enforces two controls to protect against compromised or tampered plugin sources (SAFE-T1102):
+
+### 1. Pinned refs (enforced)
+
+All `github://` installs must include a `#tag` or `#sha` suffix. This ensures the code you audit is exactly what gets installed — a push to the same branch cannot silently swap in different code between your review and a workspace restart.
+
+```
+✅  github://Molecule-AI/my-plugin#v1.2.3       (semver tag)
+✅  github://Molecule-AI/my-plugin#abc1234def   (commit SHA)
+❌  github://Molecule-AI/my-plugin              (→ HTTP 422)
+```
+
+To bypass during local development, set `PLUGIN_ALLOW_UNPINNED=true` in your platform environment. **Do not set this in production.**
+
+### 2. SHA-256 content integrity (optional)
+
+When installing from GitHub, you can provide an expected SHA-256 hash of the staged plugin tree. The platform verifies the hash before completing the install — a mismatch aborts with HTTP 422 and cleans up the staging directory.
+
+```bash
+curl -X POST http://localhost:8080/workspaces/{id}/plugins \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {token}" \
+  -d '{
+    "source": "github://Molecule-AI/my-plugin#v1.2.3",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }'
+```
+
+**How the hash is computed:** Walk all non-manifest files in the staged plugin tree, sort by relative path, concatenate as `<rel-path>\x00<content>`, and compute `sha256.Sum256`. The hash is lowercase hex.
+
+You can pre-compute the expected hash from a clean checkout:
+```bash
+# In a clean clone of the plugin repo at the target ref:
+find . -type f ! -name 'manifest.json' | sort | \
+  xargs -I{} sh -c 'printf "%s\x00" "{}" && cat "{}"' | sha256sum
+```
 
 ---
 

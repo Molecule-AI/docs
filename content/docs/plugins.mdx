@@ -190,6 +190,41 @@ Loaded by default from the `plugins/` directory at the repo root.
 | `ecc` | General Claude Code guardrails. |
 | `browser-automation` | Puppeteer/CDP-based web scraping and live canvas screenshots. Opt-in per workspace. |
 
+### Platform Opt-in Plugins
+
+Available in the platform registry (`local://`) but not installed by default.
+Add them per workspace or as org defaults as needed.
+
+| Plugin | Tools | Requires | Purpose |
+|--------|-------|----------|---------|
+| `molecule-medo` | `create_medo_app`, `update_medo_app`, `publish_medo_app` | `MEDO_API_KEY` secret | Baidu MeDo app builder integration — create, update, and publish MeDo mini-apps from within an agent. |
+
+#### Installing molecule-medo
+
+```bash
+# 1. Set your API key
+curl -X POST http://localhost:8080/workspaces/{id}/secrets \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{"key": "MEDO_API_KEY", "value": "your-medo-api-key"}'
+
+# 2. Install the plugin (triggers auto-restart)
+curl -X POST http://localhost:8080/workspaces/{id}/plugins \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{"source": "local://molecule-medo"}'
+```
+
+Or add it to `org.yaml`:
+
+```yaml
+workspaces:
+  - name: App Builder
+    plugins: [molecule-medo]
+    secrets:
+      MEDO_API_KEY: "${MEDO_API_KEY}"
+```
+
 ---
 
 ## Org Template Plugin Resolution

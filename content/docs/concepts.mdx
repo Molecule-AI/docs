@@ -8,7 +8,8 @@ description: The core primitives that compose every Molecule AI org — workspac
 A **workspace** is a real Docker container running a real LLM agent. Each
 workspace has:
 
-- A **role** (a one-line job description fed into its system prompt)
+- A **role** (a one-line job description fed into its system prompt — also
+  written to `/workspace/AGENTS.md` so peers can discover it)
 - An **initial prompt** (run once at first boot — typically clone repo,
   read docs, memorise context)
 - A **runtime** (`claude-code`, `langgraph`, `crewai`, `autogen`, `deepagents`,
@@ -21,6 +22,35 @@ workspace has:
 Workspaces talk to each other via **A2A** (agent-to-agent) messages, routed
 by the platform. Communication rules: same workspace, siblings, and
 parent/child are allowed; everything else is denied.
+
+### AGENTS.md auto-generation
+
+At startup, every workspace automatically generates `/workspace/AGENTS.md`
+from its `config.yaml`. The file follows the
+[AAIF (Agent Artifact Interchange Format)](https://github.com/google/A2A) standard
+and contains:
+
+| Section | Source |
+|---------|--------|
+| Name | `config.yaml → name` |
+| Role | `config.yaml → role` (falls back to description) |
+| Description | `config.yaml → description` |
+| A2A Endpoint | `$AGENT_URL` env var, or `http://localhost:{a2a.port}/a2a` |
+| MCP Tools | union of `config.yaml → tools` + `plugins` |
+
+Peers fetch it via `GET /workspace/AGENTS.md` for capability discovery. Keep
+`name`, `role`, and `description` accurate in `config.yaml` — they are the
+sole source of truth for what this agent announces to the org.
+
+```yaml
+# config.yaml — relevant fields for AGENTS.md
+name: Backend Engineer
+role: "Owns the Go platform — API, migrations, tests, and CI gates."
+description: "Senior backend engineer focused on correctness, security, and performance."
+```
+
+The generator is non-fatal: a missing or unreadable `config.yaml` prints a
+startup warning but does not prevent the workspace from booting.
 
 ## External agents
 
@@ -124,6 +154,7 @@ defaults:
 
 workspaces:
   - name: PM
+    role: "Product manager — triages issues, reviews PRs, unblocks the team."
     canvas: { x: 400, y: 50 }
     plugins: [molecule-workflow-triage]
     channels:
@@ -131,9 +162,12 @@ workspaces:
         config: { bot_token: "${TELEGRAM_BOT_TOKEN}", chat_id: "12345" }
     children:
       - name: Dev Lead
+        role: "Tech lead — coordinates engineering sub-teams and owns architecture."
         children:
           - name: Frontend Engineer
+            role: "Frontend specialist — React, TypeScript, Canvas UI."
           - name: Backend Engineer
+            role: "Backend specialist — Go platform, API, migrations, CI."
             schedules:
               - name: Hourly typecheck
                 cron_expr: "0 * * * *"

@@ -22,6 +22,20 @@ Workspaces talk to each other via **A2A** (agent-to-agent) messages, routed
 by the platform. Communication rules: same workspace, siblings, and
 parent/child are allowed; everything else is denied.
 
+### Workspace status lifecycle
+
+| Status | Meaning | Resumes via |
+|--------|---------|-------------|
+| `provisioning` | Container being started | automatic |
+| `online` | Running and accepting tasks | — |
+| `degraded` | Heartbeat `error_rate > 0.5` | auto-recovers |
+| `offline` | Missed heartbeats (liveness sweep) | auto-restart |
+| `paused` | Manually stopped via `/pause` | `POST /resume` |
+| `hibernated` | Auto-paused after idle timeout (or via `/hibernate`) | automatic on next A2A message |
+| `removed` | Deleted | — |
+
+**Hibernation** is an opt-in automatic cost-saving mode. Set `hibernation_idle_minutes` in the workspace's `config.yaml` to enable it. When a hibernated workspace receives an A2A message, the platform wakes it automatically (returning `503 Retry-After: 15` while it comes online). See [API Reference — Lifecycle](/docs/api-reference#lifecycle) for the `/hibernate` endpoint and configuration details.
+
 ## External agents
 
 An **external agent** is a workspace with `runtime: external` — it runs on

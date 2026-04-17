@@ -80,8 +80,31 @@ Core workspace CRUD and lifecycle operations.
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/workspaces/:id/restart` | WorkspaceAuth | Restart the workspace container. Sends a `restart_context` A2A message after successful re-registration. |
-| POST | `/workspaces/:id/pause` | WorkspaceAuth | Stop the container and set status to `paused`. Paused workspaces skip health sweep, liveness monitor, and auto-restart. |
+| POST | `/workspaces/:id/pause` | WorkspaceAuth | Stop the container and set status to `paused`. Paused workspaces skip health sweep, liveness monitor, and auto-restart. Resume manually via `/resume`. |
 | POST | `/workspaces/:id/resume` | WorkspaceAuth | Re-provision a paused workspace. Status transitions to `provisioning`. |
+| POST | `/workspaces/:id/hibernate` | WorkspaceAuth | Immediately hibernate a workspace (stop container, set status to `hibernated`). Useful for manual cost control. See hibernation note below. |
+
+<Callout type="info">
+  **Workspace hibernation**
+
+  A workspace with `hibernation_idle_minutes` set in its config will be **automatically hibernated** by the platform after that many idle minutes (no active tasks, no recent heartbeat). The monitor checks every 2 minutes.
+
+  `hibernated` differs from `paused`:
+  - **`paused`** — manual, resumes only via `POST /resume`.
+  - **`hibernated`** — automatic (or via `POST /hibernate`), resumes **automatically** when an A2A message arrives.
+
+  When a message is sent to a hibernated workspace, the platform returns:
+  ```
+  HTTP 503  Retry-After: 15
+  {"waking": true}
+  ```
+  Callers should retry after ~15 seconds. The workspace typically returns to `online` within that window.
+
+  To opt a workspace into auto-hibernation, add to its `config.yaml`:
+  ```yaml
+  hibernation_idle_minutes: 30   # hibernate after 30 min idle; null (default) = disabled
+  ```
+</Callout>
 
 ---
 

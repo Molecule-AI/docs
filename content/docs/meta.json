@@ -17,6 +17,8 @@
     "observability",
     "troubleshooting",
     "---Runtimes---",
-    "google-adk"
+    "google-adk",
+    "---Integrations---",
+    "opencode"
   ]
 }

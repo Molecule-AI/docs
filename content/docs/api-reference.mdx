@@ -7,6 +7,16 @@ description: Complete reference for all Molecule AI Platform HTTP and WebSocket 
 
 The Molecule AI Platform exposes a REST API (default port 8080) for workspace management, agent registry, communication, and administration. All endpoints return JSON unless otherwise noted.
 
+<Callout type="warn">
+  **Breaking changes — PR #701 (2026-04-17)**
+
+  - **`PATCH /workspaces/:id` now requires authentication.** Previously, requests without a bearer token could update cosmetic fields (name, x/y position). All `PATCH` calls now require `Authorization: Bearer <workspace-token>` or receive **401 Unauthorized**.
+  - **`GET /templates` and `GET /org/templates` now require AdminAuth.** Unauthenticated callers receive **401 Unauthorized**.
+  - **All `/workspaces/:id` endpoints validate the `:id` path parameter** as a UUID. Non-UUID values return **400 Bad Request** before any database interaction.
+
+  **Migration:** add `Authorization: Bearer <workspace-token>` to all `PATCH /workspaces/:id` calls. Use an admin bearer token for `GET /templates` and `GET /org/templates`. Ensure `:id` values in automation scripts are valid UUIDs.
+</Callout>
+
 **Base URL:** `http://localhost:8080` (self-hosted) or `https://api.moleculesai.app` (SaaS)
 
 ---
@@ -62,7 +72,7 @@ Core workspace CRUD and lifecycle operations.
 | POST | `/workspaces` | AdminAuth | Create a new workspace. Accepts `name`, `runtime`, `template`, `parent_id`, `tier`, `workspace_dir`, and other fields. Runtime is auto-detected from template config if omitted (defaults to `langgraph`). |
 | GET | `/workspaces` | AdminAuth | List all workspaces with status, runtime, agent card, position, and hierarchy info. |
 | GET | `/workspaces/:id` | WorkspaceAuth | Get a single workspace by ID. |
-| PATCH | `/workspaces/:id` | WorkspaceAuth | Update workspace fields. **Field-level authz:** cosmetic fields (name, role, x, y, canvas) pass through; sensitive fields (tier, parent_id, runtime, workspace_dir) require a valid bearer token when any live token exists. |
+| PATCH | `/workspaces/:id` | WorkspaceAuth | Update workspace fields. A workspace bearer token is always required — unauthenticated calls return 401. Validates field constraints: `name` ≤ 255 chars, `role` ≤ 1,000 chars, `model` and `runtime` ≤ 100 chars each; `name` and `role` must not contain newlines (`\\n`, `\\r`) or YAML-special characters (`{}[]|>*&!`). Oversized or invalid field values return 400. `:id` must be a valid UUID. |
 | DELETE | `/workspaces/:id` | AdminAuth | Delete a workspace. Stops the container, revokes all auth tokens, and removes all associated data. |
 
 ### Lifecycle
@@ -302,14 +312,14 @@ Expand and collapse team views in the Canvas hierarchy.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/templates` | None | List available workspace templates with their runtime, description, and config schema. |
+| GET | `/templates` | AdminAuth | List available workspace templates with their runtime, description, and config schema. |
 | POST | `/templates/import` | AdminAuth | Import a workspace template from a `github://` source URL. |
 
 ### Org Templates
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/org/templates` | None | List available organization templates. |
+| GET | `/org/templates` | AdminAuth | List available organization templates. |
 | POST | `/org/import` | AdminAuth | Import an org template. Applies `resolveInsideRoot` path sanitization. Creates the full workspace hierarchy defined in `org.yaml`. |
 
 ### Bundles

@@ -18,6 +18,10 @@
     "self-hosting",
     "observability",
     "troubleshooting",
+    "---Security---",
+    "security/index",
+    "security/safe-mcp-advisory",
+    "security/owasp-agentic-top-10",
     "---Runtimes---",
     "google-adk",
     "hermes"

@@ -1,0 +1,104 @@
+---
+title: ADMIN_TOKEN — Production Requirement
+description: Mandatory ADMIN_TOKEN configuration for self-hosted Molecule AI deployments.
+---
+
+## Overview
+
+`ADMIN_TOKEN` is a **required** secret for all production Molecule AI deployments.
+It gates access to administrative endpoints and must be set before going live.
+
+**Deadline to migrate: April 22, 2026.** Deployments without `ADMIN_TOKEN` set
+will begin rejecting `/admin/*` requests after this date.
+
+## What ADMIN_TOKEN is
+
+`ADMIN_TOKEN` is a bearer token that authenticates callers to the platform's
+administrative endpoints (`/admin/*`). It is checked by the `AdminAuth`
+middleware on every admin route.
+
+## Generating a token
+
+Generate a cryptographically random token:
+
+```bash
+openssl rand -base64 32
+```
+
+Store the output — it is shown only once and cannot be recovered from the
+platform.
+
+## Setting ADMIN_TOKEN in production
+
+### Fly.io (recommended for self-hosted)
+
+```bash
+fly secrets set ADMIN_TOKEN="your-generated-token"
+fly deploy
+```
+
+### Docker / Docker Compose
+
+```yaml
+services:
+  platform:
+    environment:
+      ADMIN_TOKEN: "your-generated-token"
+```
+
+### Bare-metal / systemd
+
+```bash
+export ADMIN_TOKEN="your-generated-token"
+./platform-server  # or however you start the binary
+```
+
+## What ADMIN_TOKEN gates
+
+All `/admin/*` endpoints require `Authorization: Bearer <ADMIN_TOKEN>`:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /admin/workspaces` | List all workspaces |
+| `POST /admin/workspaces/:id/pause` | Pause a workspace |
+| `POST /admin/workspaces/:id/resume` | Resume a workspace |
+| `POST /admin/workspaces/:id/terminate` | Force-terminate a container |
+| `GET /admin/metrics` | Platform-level metrics |
+| `POST /admin/tier-promote` | Promote a workspace to a higher tier |
+
+## What happens if ADMIN_TOKEN is missing
+
+In deployments where `ADMIN_TOKEN` is **unset** (empty string or not present in
+the environment), the `AdminAuth` middleware currently **fail-opens** — it allows
+all requests through without credential validation.
+
+This fail-open behavior exists for backward compatibility during the transition
+period but **will be removed**. After April 22, 2026, requests to `/admin/*`
+endpoints without a valid `ADMIN_TOKEN` will return `401 Unauthorized`.
+
+## Verifying your setup
+
+Check that `ADMIN_TOKEN` is present and working:
+
+```bash
+curl -s -H "Authorization: Bearer $ADMIN_TOKEN" \
+  http://localhost:8080/admin/workspaces | jq '.count'
+```
+
+If the response is `401`, the token is missing or incorrect. If you get a JSON
+payload with a `count` field, the token is working.
+
+## Rotating ADMIN_TOKEN
+
+To rotate without downtime:
+
+1. **Deploy** the new token: `fly secrets set ADMIN_TOKEN="new-token" && fly deploy`
+2. **Verify** the new token works (see above)
+3. **Remove** the old token: `fly secrets unset OLD_TOKEN_NAME` (Fly does not
+   persist old secret values after unset)
+
+## Related
+
+- [Self-Hosting overview](/docs/self-hosting) — full deployment guide
+- [Security Configuration](/docs/self-hosting#security-configuration) — other
+  production security variables

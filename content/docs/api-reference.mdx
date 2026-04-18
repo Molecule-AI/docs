@@ -178,6 +178,16 @@ Legacy aliases `GET/POST/DELETE /admin/secrets[/:key]` also exist and behave ide
 | POST | `/workspaces/:id/memories` | WorkspaceAuth | Create an agent memory entry. |
 | DELETE | `/workspaces/:id/memories/:id` | WorkspaceAuth | Delete an agent memory by ID. |
 
+**Automatic secret redaction (SAFE-T1201):** Every `POST /workspaces/:id/memories` write passes through a secret-scrubbing stage before the value reaches the database. The platform detects and redacts:
+
+| Pattern class | Examples |
+|---------------|---------|
+| `*_API_KEY` suffix | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `STRIPE_API_KEY` |
+| `*_TOKEN` suffix | `GITHUB_TOKEN`, `GH_TOKEN`, `SLACK_BOT_TOKEN` |
+| Bearer headers | `Authorization: Bearer sk-…` embedded in text |
+
+Clean content passes through unchanged. When a write is partially redacted the platform logs a warning containing the pattern class (never the raw value). This applies to all memory scopes — `LOCAL`, `TEAM`, and `GLOBAL` — so a prompt-injected agent cannot exfiltrate raw credentials into shared memory.
+
 ---
 
 ## Files

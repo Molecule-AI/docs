@@ -104,6 +104,8 @@ Core workspace CRUD and lifecycle operations.
   ```yaml
   hibernation_idle_minutes: 30   # hibernate after 30 min idle; null (default) = disabled
   ```
+
+  **Atomic hibernation guarantee:** The platform uses a single atomic SQL claim (`UPDATE … WHERE active_tasks = 0`) before stopping the container. If a task arrives between the idle check and the container stop, the claim fails and hibernation is aborted — no in-flight tasks are silently lost.
 </Callout>
 
 ---

@@ -144,7 +144,7 @@ A terminal UI dashboard for real-time workspace monitoring, event log streaming,
 
 ## Infrastructure Services
 
-All services run via `docker-compose.infra.yml`, attached to the shared `molecule-monorepo-net` network. Start them with:
+All services run via `docker-compose.infra.yml`, attached to the shared `molecule-core-net` network. Start them with:
 
 ```bash
 ./infra/scripts/setup.sh    # Start Postgres, Redis, Langfuse, Temporal; run migrations

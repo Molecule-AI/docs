@@ -91,10 +91,14 @@ by the plugin author.
 enabling them. Verify the `author`, `version`, and `entrypoint` are from a
 trusted source. Do not enable plugins from untrusted or unknown authors.
 
-**长期 (long-term):** The platform will add manifest signing using an
-Ed25519 key pair. Plugin authors will sign their manifests; the platform will
-verify signatures before serving or executing manifests. Track progress in
-`molecule-monorepo` issue tracker.
+**长期 (long-term):** The platform will add manifest signing aligned with the
+OWASP MCPS (MCP Secure) cryptographic security layer. Plugin authors digitally
+sign their tool definitions (name, description, inputSchema) with an ECDSA P-256
+key pair. The platform verifies signatures against the author's published public
+key, computes and stores schema hashes for pinning, and rejects connections where
+the schema hash has changed since the last verified session — providing "rug pull
+protection." This follows the MCPS L3 trust level: signed tool definitions
+required. Track progress in `molecule-monorepo` issue tracker.
 
 Until signing is available, treat plugin manifests as untrusted input.
 
@@ -183,13 +187,71 @@ install requests that reference unpinned or unverified sources.
 ## Remediation checklist for self-hosted operators
 
 - [ ] Audit all plugin `package.json` files — pin all dependencies to exact versions
+  *(MCP04: "avoid 'latest' or floating version references")*
 - [ ] Verify CI/CD uses `npm ci` not `npm install`
+  *(MCP04: "no dependency integrity verification")*
 - [ ] Commit and push `package-lock.json` for all plugins
 - [ ] Add `.npmrc save-exact=true` to all plugin directories
 - [ ] Inspect `manifest.json` for any enabled plugin before use
+  *(MCP04: "MCP connectors or plugins are installed without signing or provenance checks")*
 - [ ] Block workspace egress to non-approved hosts at the network level
+  *(MCP09: "no asset inventory or endpoint discovery process")*
 - [ ] Set `PLUGIN_ALLOW_UNPINNED=false` (when available)
+  *(MCP09: "teams can deploy MCP servers without central registration or security review")*
 - [ ] Watch `molecule-monorepo` for the manifest-signing feature
+  *(MCPS L3: "tool definition signatures required")*
+
+---
+
+## Normative references
+
+The mitigations in this advisory align with the following OWASP publications:
+
+**MCP04:2025 — Software Supply Chain Attacks & Dependency Tampering**
+*OWASP MCP Top 10, 2025 edition*
+<https://github.com/OWASP/www-project-mcp-top-10>
+
+Relevant controls that informed G-01 and G-02 mitigations:
+
+- *Signed Components & Provenance Verification:* "Require cryptographic signing for
+  SDKs, plugins, tool manifests, container images, and validate signatures during
+  installation and startup."
+- *Version Pinning & Approved Registries:* "Pin component versions and avoid
+  'latest' references. Use internal package mirrors or registries and block direct
+  downloads from public internet sources."
+- *Build SBOM/CBOM Visibility:* "Generate software bill of materials (SBOM) and
+  cryptographic bill of materials (CBOM) snapshots for each MCP server and plugin
+  package. Store these alongside deployments for auditing and incident response."
+- *Dependency Scanning:* "Apply software composition analysis (SCA) and code
+  scanning tools to detect known CVEs, malicious indicators, and poisoned transitive
+  dependencies."
+
+**MCP09:2025 — Shadow MCP Servers**
+*OWASP MCP Top 10, 2025 edition*
+<https://github.com/OWASP/www-project-mcp-top-10>
+
+Relevant controls that informed the G-03 plugin allowlist mitigation:
+
+- *Central MCP Governance & Registry:* "Create a centralized registry where every
+  instance must be registered before deployment; tie registration to CI/CD pipelines."
+- *Discovery & Continuous Scanning:* "Use network discovery tools to detect open
+  MCP ports and endpoints; automate weekly shadow MCP detection scans."
+- *Baseline Configuration Templates:* "Enforce authentication (mTLS, OAuth), disable
+  unauthenticated tool calls, include preconfigured logging."
+
+**MCPS — Cryptographic Security Layer for MCP**
+*OWASP MCP Top 10 Recommended Controls*
+<https://github.com/OWASP/www-project-mcp-top-10/tree/master/2025/recommended-controls>
+
+The MCPS specification defines the Tool Definition Signing approach referenced in
+the G-02 long-term mitigation:
+
+- Tool authors sign tool definitions (name, description, inputSchema) with an
+  ECDSA P-256 private key; clients verify against the author's published public key.
+- Schema hashes are computed and stored on first verified connection, then compared
+  on subsequent connections to detect unauthorized modifications — "rug pull protection."
+- MCPS defines four trust levels (L0–L4); the G-02 long-term fix targets L3:
+  "L3: L2 plus tool definition signatures required."
 
 ---
 

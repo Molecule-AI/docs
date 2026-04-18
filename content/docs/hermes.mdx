@@ -9,14 +9,16 @@ import { Callout } from 'fumadocs-ui/components/callout';
 
 Hermes is Molecule AI's built-in inference router powering `runtime: hermes` workspaces. It supports three dispatch paths — a native Anthropic Messages API path, a native Gemini `generateContent` path, and an OpenAI-compatible shim for 13+ other providers — keyed automatically by which API secret is present on the workspace.
 
-Phases 2a, 2b, and 2c are fully merged to `main`:
+Phases 2a through 2e are fully merged to `main`:
 
 - **Phase 2a** (PR #240) — native Anthropic dispatch
 - **Phase 2b** (PR #255) — native Gemini dispatch with correct `role: "model"` + `parts` wire format
 - **Phase 2c** (PR #267) — correct multi-turn history preserved as turns (not flattened) on all three paths
+- **Phase 2d** (PR #499) — stacked system messages (`system_blocks` kwarg) on Anthropic and Gemini paths
+- **Phase 2e** (PRs #644, #645) — native `tools=[]` parameter + `response_format=json_schema` structured output on Anthropic native path
 
 <Callout type="info">
-  **Phase 2d (roadmap):** tool_use / tool_result blocks, vision content, system instructions, and streaming on the native paths are scoped for a future release. See the [capability table](#capability-table) below.
+  **Remaining roadmap:** vision content blocks and streaming on native paths are scoped for a future release.
 </Callout>
 
 ---
@@ -231,9 +233,61 @@ Only set `system_blocks` when you want fine-grained control over block ordering 
 
 ---
 
+## Native tools parameter (Phase 2e — PR #644)
+
+Hermes now passes tool definitions to the model via the native `tools=[]` API parameter instead of injecting them as text in the prompt. This applies to the **Anthropic native dispatch path** and produces structured tool call/result blocks that the Nous/Hermes-3 tool call format handles correctly.
+
+```python
+executor = HermesA2AExecutor(
+    tools=[
+        {
+            "name": "bash",
+            "description": "Run a bash command and return stdout/stderr.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "The shell command to run"}
+                },
+                "required": ["command"]
+            }
+        }
+    ]
+)
+```
+
+The OpenAI-compat shim path also accepts `tools=[]` but continues to inject them as text-in-prompt for compatibility with OpenRouter-routed models that don't natively support tool calls.
+
+## Structured output — `response_format` (Phase 2e — PR #645)
+
+`response_format=json_schema` is wired through to the Anthropic native dispatch path. Pass a JSON Schema definition to request strictly-typed JSON output from the model:
+
+```python
+executor = HermesA2AExecutor(
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": "audit_finding",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "severity":    {"type": "string", "enum": ["critical", "high", "medium", "low"]},
+                    "description": {"type": "string"},
+                    "remediation": {"type": "string"}
+                },
+                "required": ["severity", "description", "remediation"]
+            }
+        }
+    }
+)
+```
+
+The model's completion will always be valid JSON matching the schema. The Gemini native and OpenAI-compat shim paths do not yet support `response_format` — it is silently ignored on those paths.
+
+---
+
 ## Capability table
 
-### Shipped (Phases 2a + 2b + 2c + PR #499 — all merged to main)
+### Shipped (Phases 2a–2e — all merged to main)
 
 | Capability | OpenAI-compat shim | Anthropic native | Gemini native |
 |---|---|---|---|
@@ -242,16 +296,17 @@ Only set `system_blocks` when you want fine-grained control over block ordering 
 | Correct Gemini wire format | ❌ wrong role, missing parts | — | ✅ |
 | No compat-shim translation overhead | ❌ every request translated | ✅ | ✅ |
 | Stacked system messages (`system_blocks`) | ❌ | ✅ | ✅ |
+| Native `tools=[]` parameter | ⚠️ text-in-prompt injection | ✅ PR #644 | 📋 roadmap |
+| Structured output (`response_format=json_schema`) | ❌ | ✅ PR #645 | 📋 roadmap |
 
-### Roadmap — Phase 2d (not yet shipped)
+### Roadmap (future release)
 
 | Capability | Anthropic native | Gemini native |
 |---|---|---|
-| `tool_use` / `tool_result` blocks | 📋 Phase 2d | 📋 Phase 2d |
-| Vision content blocks | 📋 Phase 2d | 📋 Phase 2d |
-| System instructions | 📋 Phase 2d | 📋 Phase 2d |
-| Extended thinking | 📋 Phase 2d | — |
-| Streaming | 📋 Phase 2d | 📋 Phase 2d |
+| Vision content blocks | 📋 | 📋 |
+| Streaming | 📋 | 📋 |
+| Native tools on Gemini path | — | 📋 |
+| Structured output on Gemini path | — | 📋 |
 
 ---
 

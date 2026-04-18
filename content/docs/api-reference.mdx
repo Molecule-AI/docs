@@ -396,6 +396,70 @@ Real-time event streaming for Canvas clients.
 
 ---
 
+## Server-Sent Events (AG-UI)
+
+Per-workspace SSE stream compatible with the [AG-UI protocol](https://github.com/ag-ui-protocol/ag-ui). Use this endpoint to consume structured agent events from a web client or external tool without a WebSocket library.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/events/stream` | WorkspaceAuth | Open an SSE stream for the workspace. Returns `Content-Type: text/event-stream`. Sends an initial `: ping` comment on connect, then delivers every event emitted by the workspace in AG-UI envelope format. Events from other workspaces are filtered out. Returns `404` if the workspace does not exist. |
+
+### Event envelope format
+
+Each event is delivered as an SSE `data:` line containing a JSON object:
+
+```json
+{
+  "type": "AGENT_MESSAGE",
+  "timestamp": 1713398400000,
+  "data": { ... }
+}
+```
+
+- **`type`** — event type string (e.g. `AGENT_MESSAGE`, `A2A_RESPONSE`, `TASK_UPDATED`)
+- **`timestamp`** — Unix milliseconds at time of broadcast
+- **`data`** — event-specific payload (same payload as the WebSocket hub delivers)
+
+### Event types streamed
+
+All event types emitted by `RecordAndBroadcast` **and** `BroadcastOnly` reach the SSE stream. The `BroadcastOnly` path is important: events like `AGENT_MESSAGE`, `A2A_RESPONSE`, and `TASK_UPDATED` skip Redis and would be invisible to a Redis-only subscriber — the in-process SSE layer catches them.
+
+### Example: connect with `curl`
+
+```bash
+curl -N \
+  -H "Authorization: Bearer <workspace-token>" \
+  http://localhost:8080/workspaces/<id>/events/stream
+```
+
+```
+: ping
+
+data: {"type":"AGENT_MESSAGE","timestamp":1713398401234,"data":{"text":"Starting task..."}}
+
+data: {"type":"TASK_UPDATED","timestamp":1713398405678,"data":{"status":"running"}}
+```
+
+### Example: connect from JavaScript
+
+```js
+const es = new EventSource(
+  `/workspaces/${workspaceId}/events/stream`,
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+
+es.onmessage = (e) => {
+  const event = JSON.parse(e.data);
+  console.log(event.type, event.data);
+};
+```
+
+<Callout type="info">
+  The SSE endpoint uses WorkspaceAuth — the bearer token must be bound to the `:id` in the path. A token for workspace A cannot open a stream for workspace B.
+</Callout>
+
+---
+
 ## Error Responses
 
 All endpoints return standard HTTP status codes:

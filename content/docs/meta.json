@@ -18,6 +18,9 @@
     "self-hosting",
     "observability",
     "troubleshooting",
+    "---Security---",
+    "security/index",
+    "security/safe-mcp-advisory",
     "---Runtimes---",
     "google-adk",
     "hermes"

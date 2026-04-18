@@ -12,6 +12,10 @@ using the bundled `molecule-dev` template.
 - Go 1.25+ and Node 20+ if building from source
 - An LLM API key (Claude, OpenRouter, or Gemini)
 
+<Callout type="info">
+  **Default model:** New workspaces that do not specify a model use `anthropic:claude-opus-4-7` by default. To pin a different model, set `model: <provider>:<name>` in the workspace `config.yaml` or pass `MODEL_DEFAULT` in your `.env`.
+</Callout>
+
 ## Option A: One-command start (recommended)
 
 ```bash

@@ -334,6 +334,44 @@ Defaults to `local://<name>` when omitted.
 
 ---
 
+## Org-Level Plugin Governance
+
+Tenant admins can restrict which plugins workspaces in their org are permitted to load using a per-org allowlist. When an allowlist is configured, workspaces can only install plugins explicitly listed — all other installs are blocked at load time.
+
+### Managing the allowlist
+
+```bash
+# Allow a plugin in the org
+curl -X POST http://localhost:8080/admin/orgs/{orgId}/plugins/allowlist \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"plugin_name": "molecule-audit-trail"}'
+
+# Remove a plugin from the allowlist
+curl -X DELETE http://localhost:8080/admin/orgs/{orgId}/plugins/allowlist/molecule-audit-trail \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+Both endpoints require `AdminAuth`. `orgId` is the org's UUID (set via `MOLECULE_ORG_ID` for SaaS tenants; in self-hosted single-org mode this is the org record created at first startup).
+
+### Behaviour when an allowlist is configured
+
+| Scenario | Result |
+|----------|--------|
+| No allowlist entries for the org | All plugins are permitted (default; backward-compatible) |
+| Allowlist has at least one entry | Only listed plugins may be installed; others return `403 Forbidden` |
+| Plugin already installed when allowlist was created | Pre-existing installs are not removed, but the plugin cannot be re-installed if later uninstalled |
+
+### Relationship to supply-chain pinning
+
+The governance allowlist and supply-chain pinning (`PLUGIN_ALLOW_UNPINNED`) are independent:
+- The **allowlist** controls *which* plugins workspaces can load.
+- **Pinning** controls *how* plugins must be referenced (exact commit/tag, never `latest`).
+
+Both can be active simultaneously — the most restrictive rule wins.
+
+---
+
 ## API Reference
 
 | Method | Path | Description |
@@ -346,3 +384,5 @@ Defaults to `local://<name>` when omitted.
 | GET | `/workspaces/:id/plugins/available` | Available plugins filtered by workspace runtime |
 | GET | `/workspaces/:id/plugins/compatibility?runtime=X` | Preflight runtime-change compatibility check |
 | GET | `/workspaces/:id/plugins/:name/download` | Download plugin as tarball (external workspaces) |
+| POST | `/admin/orgs/:orgId/plugins/allowlist` | Add a plugin to the org allowlist (AdminAuth) |
+| DELETE | `/admin/orgs/:orgId/plugins/allowlist/:name` | Remove a plugin from the org allowlist (AdminAuth) |

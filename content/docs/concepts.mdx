@@ -170,6 +170,16 @@ investigate immediately; the audit chain may have been modified offline.
 Use the event-type filter bar at the top of the panel to narrow results.
 Click **Load more** to paginate (cursor-based, 50 entries per page).
 
+### Memory Inspector panel
+
+The **Memory Inspector** (Side Panel → Memory tab, 🧠 icon) lets you browse, search, and inspect all `LOCAL` and `TEAM` memory keys for any workspace — live, without leaving the canvas.
+
+- **Browse** — all memory keys for the selected workspace, grouped by HMA scope (`LOCAL`, `TEAM`)
+- **Semantic search** — enter a query to run `GET /workspaces/:id/memories?q=<query>` against the vector index; results are colour-coded by cosine similarity score
+- **Inspect** — click any key to expand its full value and metadata (`created_at`, scope, last writer)
+
+The inspector polls on workspace selection change and on each heartbeat. Changes from agents running in parallel appear within one heartbeat cycle (~15s).
+
 ## How they fit together
 
 A typical org definition:

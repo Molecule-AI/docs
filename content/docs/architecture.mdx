@@ -115,6 +115,25 @@ The shared runtime provides the base agent infrastructure: A2A server, heartbeat
 
 Each adapter repo has its own `Dockerfile` that installs `molecule-ai-workspace-runtime` from PyPI plus adapter-specific dependencies. Templates are cloned at Docker build time into the platform image via `manifest.json`.
 
+### Framework Adapters (workspace-template)
+
+Some workspace templates embed framework-specific adapters that extend `molecule-ai-workspace-runtime` with framework-level security controls. The **smolagents adapter** (`workspace-template/adapters/smolagents/`) ships two such controls:
+
+**Environment sanitization** (`make_safe_env`) — child processes spawned by the smolagents adapter inherit a filtered copy of the host environment. The following are stripped before the subprocess starts:
+
+- Any key listed in `SMOLAGENTS_ENV_DENYLIST` (comma-separated; set by the operator)
+- Any key whose name ends in `_API_KEY` or `_TOKEN`
+
+Set `SMOLAGENTS_ENV_DENYLIST=VAR1,VAR2` in the workspace's secrets to extend the denylist.
+
+**Safe message delivery** (`safe_send_message`) — outbound smolagents messages are:
+
+1. Prefixed with `[smolagents]` so the source is always attributable in logs and Canvas activity
+2. Truncated at 2 000 characters to prevent oversized payloads
+3. HTML-entity-escaped to block social-engineering injections embedded in agent output
+
+These controls complement the platform-level secret redaction described in the [API Reference](/docs/api-reference#agent-memories-hma-scoped).
+
 ### molecli
 
 **Stack:** Go / Bubbletea + Lipgloss

@@ -12,7 +12,7 @@ channels, and more through the platform API.
 ### Install
 
 ```bash
-npx @molecule-ai/mcp-server
+npx @molecule-ai/mcp-server@1.0.0
 ```
 
 ### Configure in `.mcp.json`
@@ -23,7 +23,7 @@ npx @molecule-ai/mcp-server
     "molecule": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@molecule-ai/mcp-server"],
+      "args": ["@molecule-ai/mcp-server@1.0.0"],
       "env": {
         "MOLECULE_URL": "http://localhost:8080"
       }
@@ -31,6 +31,10 @@ npx @molecule-ai/mcp-server
   }
 }
 ```
+
+<Callout type="warn">
+  **Pin the package version.** The examples above use `@1.0.0` — always specify an exact version and omit the `-y` flag. An unpinned `npx -y @molecule-ai/mcp-server` (no version) silently installs whatever npm serves on the next restart; if the package is ever compromised, it runs with your full MCP client permissions. Check [npm](https://www.npmjs.com/package/@molecule-ai/mcp-server) for the latest stable release before upgrading.
+</Callout>
 
 For SaaS deployments, set `MOLECULE_URL` to your tenant URL:
 
@@ -155,4 +159,4 @@ The MCP server exposes tools across these categories:
 |---|---|
 | Connection refused | Check `MOLECULE_URL` points to running platform |
 | 401 Unauthorized | Token expired or revoked — create a new one |
-| Tools not showing | Run `npx @molecule-ai/mcp-server` standalone to check errors |
+| Tools not showing | Run `npx @molecule-ai/mcp-server@1.0.0` standalone to check errors |

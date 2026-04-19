@@ -1,13 +1,13 @@
 ---
 title: Channels
-description: Connect workspaces to Telegram, Slack, and Lark/Feishu for social integrations.
+description: Connect workspaces to Telegram, Slack, Discord, and Lark/Feishu for social integrations.
 ---
 
 ## Overview
 
 Channels let workspaces send and receive messages on social platforms. Each
 workspace can have multiple channel integrations — a Telegram bot, a Slack
-webhook, a Lark/Feishu Custom Bot — configured independently with per-channel
+webhook, a Discord webhook, a Lark/Feishu Custom Bot — configured independently with per-channel
 allowlists and JSONB config.
 
 Outbound messages flow from the workspace through the platform adapter to the
@@ -16,16 +16,16 @@ are parsed by the adapter, and forwarded to the workspace as A2A
 `message/send` requests.
 
 ```
-User (Telegram/Slack/Lark) ──webhook──> Platform ──A2A──> Workspace Agent
-                                              <──adapter──  (response)
-User <──bot message──────────────────────────────────────/
+User (Telegram/Slack/Discord/Lark) ──webhook──> Platform ──A2A──> Workspace Agent
+                                                     <──adapter──  (response)
+User <──bot message────────────────────────────────────────────────/
 ```
 
 ---
 
 ## Adapters
 
-Three adapters are registered out of the box. Use `GET /channels/adapters` to
+Four adapters are registered out of the box. Use `GET /channels/adapters` to
 list them at runtime.
 
 ### Telegram
@@ -68,6 +68,60 @@ Uses Slack Incoming Webhooks for outbound and the Slack Events API for inbound.
 - Inbound via Events API JSON payload or slash command (URL-encoded form)
 - `url_verification` challenge handshake supported
 - Slash commands prepend the command name so the agent sees the full invocation
+
+### Discord
+
+Uses Discord Incoming Webhooks for outbound and Discord Interactions (slash commands) for inbound. Discord uses a push-based interactions model — there is no long-polling; the platform receives signed payloads at the interactions endpoint.
+
+**Required config fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `webhook_url` | string | Discord Incoming Webhook URL. Must start with `https://discord.com/api/webhooks/`. Validated on creation (matches the Slack SSRF-guard pattern). |
+
+**Global secret:**
+
+```bash
+# Register the webhook URL as a global or per-workspace secret
+curl -X PUT http://localhost:8080/settings/secrets \
+  -H 'Content-Type: application/json' \
+  -d '{"key":"DISCORD_WEBHOOK_URL","value":"https://discord.com/api/webhooks/..."}'
+```
+
+**Features:**
+
+- Outbound via Incoming Webhook — POSTs `{"content": "<text>"}` to the webhook URL
+- Long messages automatically split at newline/space boundaries (Discord 2000-character hard limit)
+- Inbound via Discord Interactions — no long-polling; Discord pushes signed payloads
+  - **Type 1 PING** — router layer responds `{"type":1}`; adapter returns `nil` (no A2A forward)
+  - **Type 2 APPLICATION\_COMMAND** — slash command, forwarded as `/commandname option1 option2`
+  - **Type 3 MESSAGE\_COMPONENT** — button/select interaction, forwarded as component data
+- User identity prefers `member.user` (guild) over `user` (DM) for consistent routing
+- `StartPolling` is a no-op (returns nil) — Discord uses interactions, not polling
+
+**Setup:**
+
+1. **Incoming Webhook** — Discord Server → channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL
+2. Add as a secret: `PUT /settings/secrets` with `DISCORD_WEBHOOK_URL`
+3. **Slash commands (inbound)** — create a Discord Application at [discord.com/developers](https://discord.com/developers/applications), set the **Interactions Endpoint URL** to `https://<platform-host>/webhooks/discord`
+4. Verify the endpoint: Discord sends a type-1 PING; the platform responds `{"type":1}` automatically
+
+**Example config:**
+
+```json
+{
+  "type": "discord",
+  "config": {
+    "webhook_url": "https://discord.com/api/webhooks/1234567890/abcdef..."
+  }
+}
+```
+
+<Callout type="info">
+  Discord does not support bot-initiated long-polling. Inbound messages only work via slash commands registered in your Discord Application. If you only need outbound (workspace → Discord), no Application setup is required — just add the webhook URL.
+</Callout>
+
+---
 
 ### Lark / Feishu
 
@@ -139,7 +193,7 @@ platform. Inbound messages arrive at:
 POST /webhooks/:type
 ```
 
-where `:type` is `telegram`, `slack`, or `lark`. The platform:
+where `:type` is `telegram`, `slack`, `discord`, or `lark`. The platform:
 
 1. Looks up all channels of that type
 2. Calls the adapter's `ParseWebhook` to extract a standardized `InboundMessage`
@@ -148,6 +202,8 @@ where `:type` is `telegram`, `slack`, or `lark`. The platform:
 
 For Telegram, the platform can also use long-polling instead of webhooks,
 started automatically when a Telegram channel is created.
+
+For Discord, the platform automatically handles type-1 PING interactions (required by Discord for endpoint verification) and forwards type-2 and type-3 interaction payloads to the workspace.
 
 ---
 
@@ -231,6 +287,17 @@ Multiple chats (comma-separated):
   "type": "slack",
   "config": {
     "webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+  }
+}
+```
+
+### Discord
+
+```json
+{
+  "type": "discord",
+  "config": {
+    "webhook_url": "https://discord.com/api/webhooks/1234567890123456789/abcdefGHIjklmnopQRSTuvwxyz_1234"
   }
 }
 ```

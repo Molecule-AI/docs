@@ -72,7 +72,7 @@ Core workspace CRUD and lifecycle operations.
 | POST | `/workspaces` | AdminAuth | Create a new workspace. Accepts `name`, `runtime`, `template`, `parent_id`, `tier`, `workspace_dir`, and other fields. Runtime is auto-detected from template config if omitted (defaults to `langgraph`). |
 | GET | `/workspaces` | AdminAuth | List all workspaces with status, runtime, agent card, position, and hierarchy info. |
 | GET | `/workspaces/:id` | WorkspaceAuth | Get a single workspace by ID. |
-| PATCH | `/workspaces/:id` | WorkspaceAuth | Update workspace fields. A workspace bearer token is always required — unauthenticated calls return 401. Validates field constraints: `name` ≤ 255 chars, `role` ≤ 1,000 chars, `model` and `runtime` ≤ 100 chars each; `name` and `role` must not contain newlines (`\\n`, `\\r`) or YAML-special characters (`{}[]|>*&!`). Oversized or invalid field values return 400. `:id` must be a valid UUID. |
+| PATCH | `/workspaces/:id` | WorkspaceAuth | Update workspace fields. A workspace bearer token is always required — unauthenticated calls return 401. Validates field constraints: `name` ≤ 255 chars, `role` ≤ 1,000 chars, `model` and `runtime` ≤ 100 chars each; `name` and `role` must not contain newlines (`\\n`, `\\r`) or YAML-special characters (`{}[]|>*&!`). Oversized or invalid field values return 400. `:id` must be a valid UUID. Financial fields (`budget_limit`) are not accepted here — use `PATCH /workspaces/:id/budget` (AdminAuth). |
 | DELETE | `/workspaces/:id` | AdminAuth | Delete a workspace. Stops the container, revokes all auth tokens, and removes all associated data. |
 
 ### Lifecycle
@@ -82,6 +82,56 @@ Core workspace CRUD and lifecycle operations.
 | POST | `/workspaces/:id/restart` | WorkspaceAuth | Restart the workspace container. Sends a `restart_context` A2A message after successful re-registration. |
 | POST | `/workspaces/:id/pause` | WorkspaceAuth | Stop the container and set status to `paused`. Paused workspaces skip health sweep, liveness monitor, and auto-restart. |
 | POST | `/workspaces/:id/resume` | WorkspaceAuth | Re-provision a paused workspace. Status transitions to `provisioning`. |
+
+### Budget
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/budget` | AdminAuth | Read a workspace's current spend and ceiling. Returns `budget_limit`, `monthly_spend`, and `budget_remaining` (all in USD cents). |
+| PATCH | `/workspaces/:id/budget` | AdminAuth | Set or clear a workspace's monthly spend ceiling. Body: `{ "budget_limit": N }` (positive integer, USD cents) or `{ "budget_limit": null }` to remove the cap. Negative values → 400. Returns same shape as GET. |
+
+**Request / response shape:**
+
+```json
+// PATCH request body
+{ "budget_limit": 500 }   // $5.00/month ceiling
+{ "budget_limit": null }  // no ceiling
+
+// GET and PATCH success response (200)
+{
+  "budget_limit":     500,   // null when no ceiling
+  "monthly_spend":    312,   // accumulated spend this period, USD cents
+  "budget_remaining": 188    // null when no ceiling; max(0, limit-spend) — can be negative
+}
+```
+
+<Callout type="warn">
+  **`budget_limit` and `monthly_spend` are absent from `GET /workspaces/:id`**
+
+  Financial fields are stripped unconditionally from the workspace detail
+  response — they do not appear for any caller, authenticated or not. Always
+  use `GET /workspaces/:id/budget` (AdminAuth) to read spend data.
+
+  `budget_limit` is also **not** accepted on the general `PATCH /workspaces/:id`
+  endpoint. Use the dedicated `/budget` route.
+</Callout>
+
+<Callout type="info">
+  **Enforcement and fail-open behaviour**
+
+  When `monthly_spend >= budget_limit`, `POST /workspaces/:id/a2a` returns:
+  ```
+  HTTP 402 Payment Required
+  {"error": "workspace budget limit exceeded"}
+  ```
+  Channel sends (Slack, Telegram, Discord, Lark) are also budget-gated with
+  the same 402 response. The workspace itself is **not paused** — it keeps
+  running; only inbound A2A and channel traffic is blocked.
+
+  **Fail-open:** if the budget check encounters a DB error, traffic is allowed
+  through rather than blocked. The spend ceiling is a soft guardrail, not a
+  hard guarantee.
+</Callout>
 
 ---
 

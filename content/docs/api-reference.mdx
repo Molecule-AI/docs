@@ -174,9 +174,41 @@ Legacy aliases `GET/POST/DELETE /admin/secrets[/:key]` also exist and behave ide
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/workspaces/:id/memories` | WorkspaceAuth | List agent memories for a workspace. |
+| GET | `/workspaces/:id/memories` | WorkspaceAuth | List or search agent memories. Supports `?q=` for semantic search (see below). |
 | POST | `/workspaces/:id/memories` | WorkspaceAuth | Create an agent memory entry. |
 | DELETE | `/workspaces/:id/memories/:id` | WorkspaceAuth | Delete an agent memory by ID. |
+
+#### Semantic search (`?q=`)
+
+When a platform-level embedding function is configured, passing `?q=<text>`
+on `GET /workspaces/:id/memories` triggers vector similarity search instead of
+the default full-text / ILIKE path:
+
+```
+GET /workspaces/{id}/memories?q=authentication+flow&limit=10
+Authorization: Bearer {token}
+```
+
+Matching entries are returned **ordered by cosine similarity** (most similar
+first). Each row includes an additional `similarity_score` field (0–1, higher
+is closer):
+
+```json
+[
+  {
+    "id": "mem_abc123",
+    "key": "auth-design",
+    "value": "We use short-lived JWTs issued by the platform and refreshed via /auth/token.",
+    "similarity_score": 0.91,
+    "created_at": "2026-04-10T14:22:00Z"
+  }
+]
+```
+
+**Graceful fallback**: if no embedding function is configured, or if the
+embedding call fails for a given query, the platform falls back transparently
+to the text-search path. The `similarity_score` field is absent in fallback
+responses. You do not need to change client code to handle both modes.
 
 ---
 

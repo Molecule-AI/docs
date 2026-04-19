@@ -437,6 +437,88 @@ LLM trace retrieval from Langfuse.
 
 ---
 
+## Audit Ledger
+
+HMAC-SHA256-chained immutable agent event log for compliance record-keeping (EU AI Act Art. 12 / Art. 13). Each event is cryptographically chained to the previous one — tampering with any record breaks all subsequent HMACs.
+
+<Callout type="warn">
+  **`AUDIT_LEDGER_SALT` required.** The platform and workspace containers must share the same `AUDIT_LEDGER_SALT` environment variable to compute and verify event HMACs. Set it in both your platform env and workspace container env. If the variable is absent, `chain_valid` returns `null` (not `false`) — no records are lost, verification is simply unavailable.
+</Callout>
+
+### Query
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/audit` | WorkspaceAuth | Query the audit ledger for a workspace. Returns events in descending chronological order with inline chain verification. |
+
+**Query parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agent_id` | string | Filter to a specific agent. |
+| `session_id` | string | Filter to a specific session. |
+| `from` | RFC 3339 | Start of time range (e.g. `2026-04-01T00:00:00Z`). |
+| `to` | RFC 3339 | End of time range. |
+| `limit` | int | Max records to return. Capped at **500**. |
+| `offset` | int | Pagination offset. |
+
+**Response shape:**
+
+```json
+{
+  "events": [
+    {
+      "id": "uuid",
+      "workspace_id": "uuid",
+      "agent_id": "my-researcher",
+      "session_id": "sess_abc123",
+      "event_type": "tool_call",
+      "payload": { "tool": "bash", "input": "ls /workspace" },
+      "hmac": "sha256hex...",
+      "prev_hmac": "sha256hex...",
+      "created_at": "2026-04-17T12:00:00Z"
+    }
+  ],
+  "chain_valid": true
+}
+```
+
+`chain_valid` values:
+- `true` — all HMACs verified; ledger is intact.
+- `false` — at least one HMAC mismatch; possible tampering.
+- `null` — `AUDIT_LEDGER_SALT` is absent from the platform env; verification skipped.
+
+### Workspace-side: recording events
+
+In your workspace template, wire `LedgerHooks` into the agent pipeline:
+
+```python
+from molecule_audit.hooks import LedgerHooks
+
+hooks = LedgerHooks(agent_id="my-researcher", session_id=session_id)
+
+async with hooks:
+    # hooks.on_task_start / on_llm_call / on_tool_call / on_task_end
+    # fire automatically at each pipeline stage
+    result = await agent.run(task)
+```
+
+`LedgerHooks` is exception-safe — a failed ledger write never aborts the agent task.
+
+### CLI chain verification
+
+```bash
+# Verify the full chain for an agent; exit 0 = intact
+python -m molecule_audit.verify --agent-id my-researcher
+
+# Custom DB URL
+python -m molecule_audit.verify --agent-id my-researcher --db postgresql://user:pass@host/db
+```
+
+Exit codes: `0` = chain valid · `1` = broken chain · `2` = `AUDIT_LEDGER_SALT` missing · `3` = DB error.
+
+---
+
 ## Events
 
 Append-only event log for structure changes.

@@ -83,6 +83,73 @@ curl -X PUT http://localhost:8080/settings/secrets \
 
 ---
 
+## Quickstart
+
+Once you have set `GOOGLE_API_KEY` (see [Secrets](#secrets) above), these steps take you from zero to a running workspace with a working multi-turn conversation:
+
+```bash
+# 1. Create a google-adk workspace
+WS=$(curl -s -X POST http://localhost:8080/workspaces \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "adk-agent",
+    "role": "Google ADK inference worker",
+    "runtime": "google-adk",
+    "model": "google:gemini-2.0-flash"
+  }' | jq -r '.id')
+echo "Workspace: $WS"
+
+# 2. Wait for ready (~30s)
+until curl -s http://localhost:8080/workspaces/$WS \
+    | jq -r '.status' | grep -q ready; do
+  echo "Waiting..."; sleep 5
+done
+
+# 3. Send your first task
+curl -s -X POST http://localhost:8080/workspaces/$WS/a2a \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": "1",
+    "method": "message/send",
+    "params": {
+      "message": {
+        "role": "user",
+        "parts": [{"kind": "text", "text": "Summarise the ADK architecture in 3 bullet points."}]
+      }
+    }
+  }' | jq '.result.parts[0].text'
+
+# 4. Multi-turn — session state is preserved across calls
+curl -s -X POST http://localhost:8080/workspaces/$WS/a2a \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": "2",
+    "method": "message/send",
+    "params": {
+      "message": {
+        "role": "user",
+        "parts": [{"kind": "text", "text": "Now give me a one-line TL;DR of what you just said."}]
+      }
+    }
+  }' | jq '.result.parts[0].text'
+
+# 5. Vertex AI alternative — set these instead of GOOGLE_API_KEY
+# curl -X PUT http://localhost:8080/settings/secrets \
+#   -d '{"key":"GOOGLE_GENAI_USE_VERTEXAI","value":"1"}'
+# curl -X PUT http://localhost:8080/settings/secrets \
+#   -d '{"key":"GOOGLE_CLOUD_PROJECT","value":"my-gcp-project"}'
+# curl -X PUT http://localhost:8080/settings/secrets \
+#   -d '{"key":"GOOGLE_CLOUD_LOCATION","value":"us-central1"}'
+```
+
+**How session state works:** the adapter maps each A2A `context_id` to an `InMemorySessionService` session. State is isolated per context and persists across calls within the same session — so the agent in step 4 recalls the answer from step 3 without any orchestrator history management. To persist sessions across workspace restarts, set `session_db_url` in `runtime_config` (see [Configuration reference](#configuration-reference)).
+
+**Model prefix stripping:** the adapter strips the `google:` prefix before passing the model name to ADK — `google:gemini-2.0-flash` becomes `gemini-2.0-flash`. Always use the `google:` prefix in your workspace config; the adapter handles the rest.
+
+---
+
 ## Basic usage
 
 ### Minimal `config.yaml`

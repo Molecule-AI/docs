@@ -14,7 +14,7 @@ affect **self-hosted** deployments. If you are using the SaaS offering at
 **Severity:** HIGH (G-01, G-02, G-03)
 **Affected versions:** All self-hosted deployments prior to the fixes shipped
 in PRs #808 and associated plugin updates.
-**Fixed in:** `molecule-monorepo` PRs #808 (platform), #809 (plugin scaffold).
+**Fixed in:** `molecule-core` PRs #808 (platform), #809 (plugin scaffold).
 
 ---
 
@@ -98,7 +98,7 @@ key pair. The platform verifies signatures against the author's published public
 key, computes and stores schema hashes for pinning, and rejects connections where
 the schema hash has changed since the last verified session — providing "rug pull
 protection." This follows the MCPS L3 trust level: signed tool definitions
-required. Track progress in `molecule-monorepo` issue tracker.
+required. Track progress in `molecule-core` issue tracker.
 
 Until signing is available, treat plugin manifests as untrusted input.
 
@@ -198,7 +198,7 @@ install requests that reference unpinned or unverified sources.
   *(MCP09: "no asset inventory or endpoint discovery process")*
 - [ ] Set `PLUGIN_ALLOW_UNPINNED=false` (when available)
   *(MCP09: "teams can deploy MCP servers without central registration or security review")*
-- [ ] Watch `molecule-monorepo` for the manifest-signing feature
+- [ ] Watch `molecule-core` for the manifest-signing feature
   *(MCPS L3: "tool definition signatures required")*
 
 ---
@@ -258,5 +258,5 @@ the G-02 long-term mitigation:
 ## Reporting security issues
 
 If you discover a new security issue in Molecule AI, please report it via
-GitHub Security Advisories on `Molecule-AI/molecule-monorepo` or contact the
+GitHub Security Advisories on `Molecule-AI/molecule-core` or contact the
 security team through your support channel.

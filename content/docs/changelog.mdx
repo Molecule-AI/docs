@@ -8,6 +8,93 @@ Entries are published daily at 23:50 UTC.
 
 ---
 
+## 2026-04-20
+
+### 🚀 New features
+
+#### Organization API keys — org-scoped bearer tokens for scripts and AI agents
+Workspaces can now mint named, revocable API keys scoped to their organization — replacing the single shared `ADMIN_TOKEN` with a modern, auditable alternative. Keys are minted from the canvas Settings panel (⌘,) and can be revoked immediately if compromised. Every key carries full org-admin access, with scoped roles and per-workspace bindings planned for a future release.
+([#1105](https://github.com/Molecule-AI/molecule-core/pull/1105),
+[#1107](https://github.com/Molecule-AI/molecule-core/pull/1107))
+
+#### /cp/* reverse-proxy — control plane routes unified under tenant domain
+Tenant canvas now serves control plane admin routes directly via an internal reverse proxy, eliminating the need for a separate CP origin. Same-origin canvas fetches now route through the platform rather than requiring Cloudflare headers.
+([#1095](https://github.com/Molecule-AI/molecule-core/pull/1095))
+
+#### AdminAuth accepts WorkOS session cookies — browser login grants org-token minting
+The platform's `AdminAuth` middleware now accepts a CP-verified WorkOS session cookie as a first-class auth tier. Users logged into the canvas UI can mint org API keys without needing a separate bearer token.
+([#1099](https://github.com/Molecule-AI/molecule-core/pull/1099))
+
+#### Canvas /waitlist page — private beta gate with contact form
+A new `/waitlist` route captures beta request rejections with a contact form, enabling the team to follow up with applicants and capture lead data.
+([#1080](https://github.com/Molecule-AI/molecule-core/pull/1080))
+
+#### Waitlist form + CP submit wiring (molecule-app)
+The marketing site waitlist page is now wired to the control plane, routing submissions to the backend with hashed-email audit logs.
+([molecule-app#12](https://github.com/Molecule-AI/molecule-app/pull/12))
+
+#### API Tokens linked to canvas settings
+The molecule-app API tokens UI has been cleaned up and connected directly to the canvas Settings panel.
+([molecule-app#13](https://github.com/Molecule-AI/molecule-app/pull/13))
+
+### 🔒 Security
+
+- **SSRF defence** — outbound A2A calls now validate URLs before connection, closing a server-side request forgery vector on the delegation endpoint.
+  ([#1147](https://github.com/Molecule-AI/molecule-core/pull/1147))
+- **Non-root container images** — all tenant Dockerfile images now include a `USER` directive before `ENTRYPOINT`, preventing containers from running as root (PID 1).
+  ([#1155](https://github.com/Molecule-AI/molecule-core/pull/1155))
+- **Cross-tenant authz gaps closed** — workspace auth tokens can no longer reach other tenants' resources; CP proxy admin-traversal paths also hardened.
+  ([#1102](https://github.com/Molecule-AI/molecule-core/pull/1102))
+- **RBAC fail-secure on built-in tools** — workspace runtime builtin tools now enforce explicit RBAC, rejecting unknown roles by default.
+  ([molecule-ai-workspace-runtime#25](https://github.com/Molecule-AI/molecule-ai-workspace-runtime/pull/25))
+- **Plugin setup.sh API key stripping** — plugin registry no longer leaks API keys into `setup.sh` environment blocks.
+  ([molecule-ai-workspace-runtime#26](https://github.com/Molecule-AI/molecule-ai-workspace-runtime/pull/26))
+- **CLI executor + sandbox CWE-78** — subprocess isolation hardening and auth helper fix for the code execution sandbox.
+  ([molecule-ai-workspace-runtime#27](https://github.com/Molecule-AI/molecule-ai-workspace-runtime/pull/27))
+- **MDX bare URL parse error** — safe-mcp-advisory.mdx build failure caused by unlinked raw URLs resolved.
+  ([docs#46](https://github.com/Molecule-AI/docs/pull/46))
+
+### 🔧 Fixes
+
+- **Harden stuck-provisioning UX** — three sub-fixes: BudgetSection no longer crashes on partial `{}` responses; missing required env vars fail-fast before container launch with a named error; a registry sweeper flips workspaces stuck for >10 min to `failed` and emits `WORKSPACE_PROVISION_TIMEOUT`.
+  ([#1119](https://github.com/Molecule-AI/molecule-core/pull/1119))
+- **Canvas CSP nonce fix** — root layout now dynamic so Content-Security-Policy nonces correctly reach Next.js scripts.
+  ([#1089](https://github.com/Molecule-AI/molecule-core/pull/1089))
+- **Canvas delete dialog race** — deleting a workspace no longer races with an open context menu, which could leave the dialog orphaned.
+  ([#1133](https://github.com/Molecule-AI/molecule-core/pull/1133))
+- **Hard delete workspaces** — `DELETE /workspaces/:id?purge=true` now fully removes the workspace and all associated data.
+  ([#1088](https://github.com/Molecule-AI/molecule-core/pull/1088))
+- **a2a-sdk pinned <1.0** — workspace runtime pins `a2a-sdk<1.0` to keep the `a2a.server.apps` import working after a breaking change in 1.0.0.
+  ([molecule-ai-workspace-runtime#24](https://github.com/Molecule-AI/molecule-ai-workspace-runtime/pull/24))
+- **Nested `<a>` accessibility fix** — nested anchor elements in molecule-app corrected, resolving an accessibility audit failure.
+  ([molecule-app#20](https://github.com/Molecule-AI/molecule-app/pull/20))
+
+### 📦 Dependencies
+
+- **@testing-library/dom + @vitest/coverage-v8 added** — molecule-app dev dependencies updated, fixing a 12-file test failure that was blocking main deploys.
+  ([molecule-app#15](https://github.com/Molecule-AI/molecule-app/pull/15))
+
+### 📚 Documentation
+
+- Organization API keys documentation — `docs/architecture/org-api-keys.md` + `docs/guides/org-api-keys.md` shipped with the feature.
+- Internal roadmap stripped from public docs — `docs/architecture/org-api-keys-followups.md` removed; public docs now describe the feature as shipped, with roadmap detail living in Molecule-AI/internal.
+- CLAUDE.md and known-issues.md added to `molecule-cli`, `molecule-mcp-server`, and `molecule-sdk-python`.
+  ([molecule-cli#2](https://github.com/Molecule-AI/molecule-cli/pull/2),
+  [molecule-mcp-server#2](https://github.com/Molecule-AI/molecule-mcp-server/pull/2),
+  [molecule-sdk-python#2](https://github.com/Molecule-AI/molecule-sdk-python/pull/2))
+
+### 🧹 Internal / housekeeping
+
+- 35 controlplane staging-promote PRs (no customer-visible changes)
+- Code-review cleanup across today's shipped PRs — dead code removal and improved error messages
+  ([#1141](https://github.com/Molecule-AI/molecule-core/pull/1141))
+- CI concurrency fix + TS error resolution for molecule-app main deploy pipeline
+  ([molecule-app#21](https://github.com/Molecule-AI/molecule-app/pull/21),
+  [molecule-app#22](https://github.com/Molecule-AI/molecule-app/pull/22))
+- Lockfile sync on molecule-app
+
+---
+
 ## 2026-04-17
 
 A high-velocity day: 80+ PRs merged across platform, canvas, runtimes, security, and channels.

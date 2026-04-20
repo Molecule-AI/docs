@@ -18,6 +18,7 @@ workspace has:
 - An optional **parent** (forms the org tree)
 - An optional **workspace_dir** (a host path bind-mounted into the
   container — gives the agent direct access to your codebase)
+- An optional **budget_limit** (workspace-level spend cap — see [Workspace budgets](#workspace-budgets) below)
 
 Workspaces talk to each other via **A2A** (agent-to-agent) messages, routed
 by the platform. Communication rules: same workspace, siblings, and
@@ -51,6 +52,75 @@ description: "Senior backend engineer focused on correctness, security, and perf
 
 The generator is non-fatal: a missing or unreadable `config.yaml` prints a
 startup warning but does not prevent the workspace from booting.
+
+## Workspace budgets
+
+A **budget limit** is a per-workspace monthly spend ceiling, expressed in
+**USD cents** (e.g. `500` = $5.00/month). It is set by a tenant admin — workspace
+agents cannot read or clear their own financial ceiling.
+
+### What happens at the ceiling
+
+When `monthly_spend >= budget_limit`, the platform blocks new A2A proxy calls
+to that workspace:
+
+```
+HTTP 402 Payment Required
+{"error": "workspace budget limit exceeded"}
+```
+
+The workspace itself keeps running — only inbound A2A messages and channel
+sends are gated. Raising `budget_limit` or resetting spend immediately
+restores traffic.
+
+**Fail-open behaviour:** if the platform cannot reach the budget record
+(e.g. a transient DB error), traffic is **allowed through** rather than
+blocked. The spend ceiling is a soft guardrail, not a hard guarantee.
+
+### Setting a limit (admin only)
+
+```bash
+# Set ceiling to $5.00/month
+curl -X PATCH https://api.moleculesai.app/workspaces/<id>/budget \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"budget_limit": 500}'
+
+# Remove ceiling entirely
+curl -X PATCH https://api.moleculesai.app/workspaces/<id>/budget \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"budget_limit": null}'
+```
+
+Values must be a positive integer (USD cents) or `null`. Negative values are
+rejected with `400 Bad Request`.
+
+### Monitoring spend
+
+Use the dedicated budget endpoint — financial fields are **not** included in
+the standard `GET /workspaces/:id` response:
+
+```bash
+curl https://api.moleculesai.app/workspaces/<id>/budget \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+```json
+{
+  "budget_limit":     500,
+  "monthly_spend":    312,
+  "budget_remaining": 188
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `budget_limit` | Ceiling in USD cents, or `null` if no limit is set |
+| `monthly_spend` | Accumulated spend this billing period in USD cents |
+| `budget_remaining` | `null` if no limit; otherwise `max(0, limit − spend)`. Can read negative if spend exceeded the ceiling before enforcement kicked in. |
+
+See the [API Reference](/docs/api-reference#budget) for the full endpoint specification.
 
 ## External agents
 

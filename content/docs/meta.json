@@ -23,6 +23,8 @@
     "security/safe-mcp-advisory",
     "---Runtimes---",
     "google-adk",
-    "hermes"
+    "hermes",
+    "---Integrations---",
+    "opencode"
   ]
 }

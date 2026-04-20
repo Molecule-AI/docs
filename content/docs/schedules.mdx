@@ -193,6 +193,44 @@ peer workspaces.
 
 ---
 
+## Cross-Org Schedule Health (Admin)
+
+Operators can retrieve schedule health for **every workspace in the org** in a single call:
+
+```bash
+curl http://localhost:8080/admin/schedules/health \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+Requires `AdminAuth`. Returns an array covering every schedule across every workspace:
+
+```json
+[
+  {
+    "schedule_id":        "uuid",
+    "workspace_id":       "uuid",
+    "workspace_name":     "security-auditor",
+    "expression":         "0 */6 * * *",
+    "enabled":            true,
+    "last_fired_at":      "2026-04-18T12:00:00Z",
+    "next_scheduled_at":  "2026-04-18T18:00:00Z",
+    "consecutive_empty":  0,
+    "phantom_detected":   false
+  }
+]
+```
+
+| Field | Description |
+|-------|-------------|
+| `last_fired_at` | Timestamp of the most recent run attempt (null if never fired) |
+| `next_scheduled_at` | When the scheduler will next attempt this schedule |
+| `consecutive_empty` | Count of consecutive runs that fired but received no task completion — an early indicator of a stuck or unresponsive workspace |
+| `phantom_detected` | `true` if the schedule appears in the DB but its workspace has been removed; these are safe to delete |
+
+Use this endpoint to audit cron health org-wide before a maintenance window, or to identify schedules that haven't fired when expected.
+
+---
+
 ## Scheduler Internals
 
 ### Poll Loop

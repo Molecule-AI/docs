@@ -54,20 +54,32 @@ repeated `getMe` calls.
 
 ### Slack
 
-Uses Slack Incoming Webhooks for outbound and the Slack Events API for inbound.
+Supports two outbound modes — Bot Token (recommended) and Incoming Webhook
+(legacy). Inbound uses the Slack Events API in both modes.
 
-**Required config fields:**
+**Config fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `webhook_url` | string | Slack Incoming Webhook URL (must start with `https://hooks.slack.com/`). |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `bot_token` | string | One of `bot_token` / `webhook_url` | Slack Bot User OAuth Token (`xoxb-…`). Enables per-agent display name and icon via `chat:write.customize`. |
+| `webhook_url` | string | One of `bot_token` / `webhook_url` | Incoming Webhook URL (must start with `https://hooks.slack.com/`). Used as fallback when `bot_token` is absent. |
+| `channel` | string | Required with `bot_token` | Target channel ID or name (e.g. `C01234ABCDE` or `#general`). |
+| `username` | string | Optional | Display name override shown in Slack (Bot Token mode only). |
+| `icon_emoji` | string | Optional | Emoji icon for the agent's avatar (e.g. `:robot_face:`). Bot Token mode only. |
 
 **Features:**
 
-- Outbound via Incoming Webhook (no OAuth required)
-- Inbound via Events API JSON payload or slash command (URL-encoded form)
-- `url_verification` challenge handshake supported
-- Slash commands prepend the command name so the agent sees the full invocation
+- **Bot Token mode** — per-agent identity: each workspace can post with its own
+  name and icon using `chat.postMessage` + `chat:write.customize`. Markdown is
+  automatically converted to Slack `mrkdwn` format.
+- **Webhook mode** — simple outbound-only integration, no OAuth required.
+- Inbound via Events API JSON payload or slash command (URL-encoded form).
+- `url_verification` challenge handshake supported.
+- Slash commands prepend the command name so the agent sees the full invocation.
+
+**Required Slack app scopes (Bot Token mode):**
+
+`chat:write`, `chat:write.customize`, `channels:history`, `app_mentions:read`
 
 ### Discord
 

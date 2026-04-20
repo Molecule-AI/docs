@@ -18,39 +18,27 @@ workspace has:
 - An optional **parent** (forms the org tree)
 - An optional **workspace_dir** (a host path bind-mounted into the
   container — gives the agent direct access to your codebase)
+- An optional **budget_limit** (workspace-level spend cap — see [Workspace budgets](#workspace-budgets) below)
 
 Workspaces talk to each other via **A2A** (agent-to-agent) messages, routed
 by the platform. Communication rules: same workspace, siblings, and
 parent/child are allowed; everything else is denied.
 
-### AGENTS.md auto-generation
+See the [API Reference](/docs/api-reference#budget) for the full endpoint specification.
 
-At startup, every workspace automatically generates `/workspace/AGENTS.md`
-from its `config.yaml`. The file follows the
-[AAIF (Agent Artifact Interchange Format)](https://github.com/google/A2A) standard
-and contains:
+### Workspace status lifecycle
 
-| Section | Source |
-|---------|--------|
-| Name | `config.yaml → name` |
-| Role | `config.yaml → role` (falls back to description) |
-| Description | `config.yaml → description` |
-| A2A Endpoint | `$AGENT_URL` env var, or `http://localhost:{a2a.port}/a2a` |
-| MCP Tools | union of `config.yaml → tools` + `plugins` |
+| Status | Meaning | Resumes via |
+|--------|---------|-------------|
+| `provisioning` | Container being started | automatic |
+| `online` | Running and accepting tasks | — |
+| `degraded` | Heartbeat `error_rate > 0.5` | auto-recovers |
+| `offline` | Missed heartbeats (liveness sweep) | auto-restart |
+| `paused` | Manually stopped via `/pause` | `POST /resume` |
+| `hibernated` | Auto-paused after idle timeout (or via `/hibernate`) | automatic on next A2A message |
+| `removed` | Deleted | — |
 
-Peers fetch it via `GET /workspace/AGENTS.md` for capability discovery. Keep
-`name`, `role`, and `description` accurate in `config.yaml` — they are the
-sole source of truth for what this agent announces to the org.
-
-```yaml
-# config.yaml — relevant fields for AGENTS.md
-name: Backend Engineer
-role: "Owns the Go platform — API, migrations, tests, and CI gates."
-description: "Senior backend engineer focused on correctness, security, and performance."
-```
-
-The generator is non-fatal: a missing or unreadable `config.yaml` prints a
-startup warning but does not prevent the workspace from booting.
+**Hibernation** is an opt-in automatic cost-saving mode. Set `hibernation_idle_minutes` in the workspace's `config.yaml` to enable it. When a hibernated workspace receives an A2A message, the platform wakes it automatically (returning `503 Retry-After: 15` while it comes online). See [API Reference — Lifecycle](/docs/api-reference#lifecycle) for the `/hibernate` endpoint and configuration details.
 
 ## External agents
 
@@ -169,6 +157,16 @@ investigate immediately; the audit chain may have been modified offline.
 
 Use the event-type filter bar at the top of the panel to narrow results.
 Click **Load more** to paginate (cursor-based, 50 entries per page).
+
+### Memory Inspector panel
+
+The **Memory Inspector** (Side Panel → Memory tab, 🧠 icon) lets you browse, search, and inspect all `LOCAL` and `TEAM` memory keys for any workspace — live, without leaving the canvas.
+
+- **Browse** — all memory keys for the selected workspace, grouped by HMA scope (`LOCAL`, `TEAM`)
+- **Semantic search** — enter a query to run `GET /workspaces/:id/memories?q=<query>` against the vector index; results are colour-coded by cosine similarity score
+- **Inspect** — click any key to expand its full value and metadata (`created_at`, scope, last writer)
+
+The inspector polls on workspace selection change and on each heartbeat. Changes from agents running in parallel appear within one heartbeat cycle (~15s).
 
 ## How they fit together
 

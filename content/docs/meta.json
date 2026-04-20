@@ -24,6 +24,8 @@
     "security/owasp-agentic-top-10",
     "---Runtimes---",
     "google-adk",
-    "hermes"
+    "hermes",
+    "---Integrations---",
+    "opencode"
   ]
 }

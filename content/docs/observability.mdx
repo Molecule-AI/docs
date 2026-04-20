@@ -60,6 +60,45 @@ This endpoint requires no authentication and is safe to scrape. Metrics are in P
 
 Configure your Prometheus instance to scrape `http://localhost:8080/metrics` at your preferred interval.
 
+## Per-Workspace Token Metrics
+
+Track LLM token consumption per workspace — input tokens, output tokens, and Anthropic prompt-cache reads/writes — aggregated over two rolling windows:
+
+```
+GET /workspaces/:id/metrics
+```
+
+Requires a **workspace bearer token** (`Authorization: Bearer <token>`). Returns:
+
+```json
+{
+  "workspace_id": "uuid",
+  "token_metrics": {
+    "1h": {
+      "input_tokens":       1250,
+      "output_tokens":       430,
+      "cache_read_tokens":   800,
+      "cache_write_tokens":  200
+    },
+    "30d": {
+      "input_tokens":      84200,
+      "output_tokens":     28100,
+      "cache_read_tokens": 52000,
+      "cache_write_tokens": 9400
+    }
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `input_tokens` | Tokens in the prompt sent to the LLM (sum over window) |
+| `output_tokens` | Tokens in the completion returned by the LLM |
+| `cache_read_tokens` | Prompt tokens served from Anthropic's prompt cache |
+| `cache_write_tokens` | Prompt tokens written into Anthropic's prompt cache |
+
+The **canvas WorkspaceUsage panel** (⊞ icon → Usage tab) displays these same metrics live, updating each time the workspace reports a heartbeat.
+
 ## Admin Liveness
 
 The liveness endpoint reports the health of every supervised subsystem:

@@ -171,6 +171,15 @@ The `RATE_LIMIT` variable (default 600 requests/min) applies per client. Adjust 
 
 Set `CORS_ORIGINS` to a comma-separated list of allowed origins. In production, restrict this to your actual domain.
 
+## Admin Authentication
+
+All `/admin/*` endpoints require `ADMIN_TOKEN`. See
+[ADMIN_TOKEN — Production Requirement](/docs/self-hosting/admin-token) for
+setup, generation, and fail-open risk details.
+
+**Action required by April 22, 2026:** Set `ADMIN_TOKEN` in all production
+deployments before this date.
+
 ## Pre-commit Hook
 
 Install the project's pre-commit hooks to enforce code quality:

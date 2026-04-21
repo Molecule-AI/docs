@@ -1,0 +1,20 @@
+---
+title: "Debug Failed Workspaces Without Leaving Canvas"
+description: "Molecule AI Canvas now surfaces EC2 console output directly in the failed workspace view — no more tabbing to the AWS Console to understand what went wrong."
+publishedAt: 2026-04-21
+tags: [canvas, devops, observability, ec2, workspaces]
+---
+
+When a Molecule AI workspace fails, the reason lives in the AWS EC2 console. Until today, that meant opening the AWS Console, finding the right instance, pulling the console log, and figuring out what happened — while your workspace sat failed and your team waited.
+
+That's now unnecessary.
+
+Canvas now surfaces `last_sample_error` and the full EC2 console output directly in the failed workspace view. You open the error panel, read the output, identify the root cause, and fix it — all without leaving Molecule AI.
+
+The trigger is a workspace that transitions to `failed` state. Molecule AI captures the EC2 console log from that point and attaches it to the workspace record. It appears in the error panel as soon as the failure is detected, ready to read.
+
+The impact is simple: one tool, one context. Debug in Canvas, fix, redeploy.
+
+If you're self-hosting Molecule AI, update to the latest release and the feature is active immediately. For hosted deployments, it's live now.
+
+Next time a workspace fails, open the error panel before you open AWS. You'll find what you need there.

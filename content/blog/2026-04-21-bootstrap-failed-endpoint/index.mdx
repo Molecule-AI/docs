@@ -1,0 +1,24 @@
+---
+title: "Monitor Workspace Bootstrap Failures with the bootstrap-failed Endpoint"
+description: "Molecule AI platform teams can now monitor workspace bootstrap failures via a dedicated AdminAuth-gated endpoint — no polling, no log scraping required."
+publishedAt: 2026-04-21
+tags: [platform, monitoring, workspaces, ops]
+---
+
+Platform teams running Molecule AI at scale need to know when workspaces fail to bootstrap — and why — without scraping logs or building custom polling logic.
+
+Starting today, the `bootstrap-failed` endpoint gives CP (Control Plane) a direct, authenticated path to monitor workspace provisioning failures. It's gated by AdminAuth, so only platform-level tooling can access it.
+
+**What it does:**
+
+- Lists all workspaces that reached a `failed` provisioning state
+- Returns the error reason, timestamp, and retry count for each
+- Supports filtering by org and time window
+
+**Why it matters:**
+
+Without this endpoint, monitoring workspace health meant either scraping agent logs or polling the workspace list and filtering by status client-side. Both approaches add latency and complexity. The `bootstrap-failed` endpoint makes failure monitoring a first-class platform concern.
+
+This is part one of a three-part feature set. The CP watcher UI and Canvas error panel integration follow in subsequent releases, which will surface the same data to end users.
+
+For platform teams running self-hosted Molecule AI: the endpoint is available in the latest release, gated behind AdminAuth credentials.

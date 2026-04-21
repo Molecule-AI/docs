@@ -1,0 +1,82 @@
+---
+title: "Git for Agents: Cloudflare Artifacts Integration Ships on Molecule AI"
+description: "Molecule AI connects AI agent workspaces to Cloudflare Artifacts — versioned, collaborative workspace snapshots that speak Git natively. Fork an agent's state, review a branch, roll back a session."
+publishedAt: 2026-04-21
+tags: [platform, integrations, cloudflare, git, agents]
+---
+
+Cloudflare [launched Artifacts](https://blog.cloudflare.com/artifacts-git-for-agents-beta/) in private beta this month — a versioned filesystem built for AI agents that speaks Git natively. The pitch: give an agent a repository, let it work, and you get full version history without changing your tooling.
+
+Molecule AI shipped the integration on April 17, ahead of the public beta in May 2026. Here's what that means in practice.
+
+## What Cloudflare Artifacts Does
+
+Artifacts is a Git-native versioned store built on Durable Objects. You create a repository for a workspace, the agent reads and writes to it using standard Git operations, and you get a complete version history — branches, commits, rollbacks — without any new client tooling.
+
+The key properties:
+- **Speaks Git natively** — agents use standard `git clone`, `git push`, `git fetch`. Any Git client works.
+- **Programmatic from zero** — the REST API creates repos on demand, without the overhead of a traditional Git host. Built for agents that need thousands of repos simultaneously.
+- **Git-notes for attribution** — structured metadata about who made a commit and why lives in Git notes, keeping the commit history clean while making agent activity fully attributable.
+- **ArtifactFS** — Cloudflare open-sourced a FUSE driver that mounts a repo as a filesystem, enabling `ls`, `cat`, and direct file access on top of Git's version history.
+
+## How Molecule AI Uses It
+
+Each Molecule AI workspace can be linked to a Cloudflare Artifacts repository. Once linked, the platform handles the credential lifecycle:
+
+**Attach a repo to a workspace:**
+```bash
+curl -X POST https://your-platform.molecule.ai/workspaces/:id/artifacts \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "import"}'
+```
+
+This creates or imports a Cloudflare Artifacts repo and stores the credential-stripped remote URL in the workspace record — no secrets in the database.
+
+**Fork a workspace's repo:**
+```bash
+curl -X POST https://your-platform.molecule.ai/workspaces/:id/artifacts/fork \
+  -H "Authorization: Bearer <token>"
+```
+
+Returns the new repo's remote URL and object count. This is the branching demo: fork an agent's working state, review the diff, merge it back when you're satisfied.
+
+**Get a short-lived Git credential:**
+```bash
+curl -X POST https://your-platform.molecule.ai/workspaces/:id/artifacts/token \
+  -H "Authorization: Bearer <token>"
+```
+
+Returns a `clone_url` in `https://x:<short-lived-token>@...` form. The token is scoped to the specific repo, short-lived, and revocable. No long-lived credentials anywhere.
+
+## What You Can Do With It
+
+### Review an agent's work before it ships
+
+Instead of reading a final output, you can `git log` the workspace's Artifacts repo and review every commit the agent made. Each commit carries the context of what the agent was working on when it ran.
+
+### Fork and compare
+
+Fork a workspace's repo at any point — before a risky operation, before a refactor, before a test run. If the outcome is bad, you have the original state. If it's good, you merge it.
+
+### Roll back a session
+
+Because Artifacts is fully versioned, a workspace's state at any previous commit is accessible via Git. An agent that corrupts a config file can have its workspace reset to a known-good state by pointing it at an earlier commit.
+
+### Persistent agent memory without a database
+
+Agents can commit their working state to Artifacts on every meaningful action. The history becomes an auditable, reviewable record of the agent's decisions — without any custom instrumentation.
+
+## First-Mover Advantage
+
+No other AI agent platform has shipped an Artifacts integration as of April 2026. Molecule AI's integration went live six days before the public beta opened, which means teams evaluating AI orchestration infrastructure can already use it in production today.
+
+The integration is gated on two environment variables — `CF_ARTIFACTS_API_TOKEN` and `CF_ARTIFACTS_NAMESPACE` — and returns a clear `503` when either is absent, making it safe to deploy without configuration.
+
+## Get Started
+
+If you're already running Molecule AI and have a Cloudflare account with Artifacts access, add the environment variables and attach a repo to any workspace. The platform handles credential management from there.
+
+If you're evaluating Molecule AI, the Artifacts integration is one of the features that makes the workspace model different from a chat interface — your agents don't just produce outputs, they maintain a versioned working state you can inspect, branch, and roll back.
+
+Configure a workspace → [Cloudflare Artifacts docs](https://blog.cloudflare.com/artifacts-git-for-agents-beta/) → your full version history.

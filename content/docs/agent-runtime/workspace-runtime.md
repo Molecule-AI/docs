@@ -1,3 +1,8 @@
+---
+title: Workspace Runtime
+description: Molecule AI's unified runtime image — runtime matrix, workspace/ directory structure, agent card registration, A2A server, heartbeat loop, and config format.
+---
+
 # Workspace Runtime
 
 The `workspace/` directory is Molecule AI's unified runtime image. Every provisioned workspace starts from this image, loads its own config, selects a runtime adapter, registers an Agent Card, exposes A2A, and joins the platform heartbeat/activity loop.

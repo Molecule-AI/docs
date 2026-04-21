@@ -144,3 +144,4 @@ Additionally, the `INCIDENT_LOG.md` file itself contained real credential values
 ### User-facing summary
 
 Error messages and logs no longer leak credential fragments. Platform handles missing `WORKSPACE_ID` gracefully with a clear startup error rather than a cryptic crash.
+

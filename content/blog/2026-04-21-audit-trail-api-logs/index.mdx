@@ -1,0 +1,71 @@
+---
+title: "Two-Layer Audit Observability: Canvas Events and API Logs Together"
+description: "Molecule AI's audit story has two layers — the Canvas Audit Trail for agent decision events, and org API key attribution for every API call. Here's how they fit together."
+publishedAt: 2026-04-21
+---
+
+One of the first questions enterprise teams ask before deploying AI agents in production is some version of: *can you show us what your agents are doing?*
+
+Not "can you show us the logs." They're not looking for raw JSON. They're looking for a coherent picture of agent activity — something a platform engineer can read in 30 seconds and something a compliance officer can sign off on without an engineering background.
+
+Molecule AI answers that question with two layers of audit observability that work together.
+
+## Layer 1: The Canvas Audit Trail — Agent Decision Events
+
+The Audit Trail Panel in Canvas is the first layer. It lives in the SidePanel for every workspace and shows a chronological ledger of discrete agent events:
+
+- **Delegation** — when this agent handed a task to another workspace
+- **Decision** — when the agent made a consequential call (tool selection, routing, escalation)
+- **Gate** — a human-in-the-loop checkpoint where the agent paused for approval before proceeding
+- **HITL** — a broader human-in-the-loop event covering review flows and approval sequences
+
+Each entry is color-coded by type. The panel supports cursor-based pagination — scroll back as far as the history goes. The active filter bar lets you isolate a single event type: show me every Gate event for this workspace in the last 90 days.
+
+For the Canvas Audit Trail, the key claim is **tamper evidence**. Each entry carries a `chain_valid` flag. When the Molecule AI backend detects that an event's chain has been broken — that an entry may have been modified or inserted after the fact — the ledger renders a red ⚠ indicator. This is the feature that makes the audit trail defensible as evidence, not just a log.
+
+## Layer 2: Org API Key Attribution — Every API Call
+
+The second layer lives at the API level, not the Canvas level. Every API call authenticated with an org-scoped API key carries the key's display prefix in the audit log.
+
+The display prefix is the first 8 characters of the key — something like `mole_a1b2`. It's visible in every log line for every request that key makes. When combined with the `created_by` field (which records which admin minted the key and when), you have full provenance: *which named integration, created by which admin, calling which endpoints, how frequently.*
+
+This is the audit attribution layer for machine-to-machine traffic. The Canvas Audit Trail tells you what the agent decided to do. Org API key attribution tells you what integrations are calling the platform API on behalf of agents.
+
+## How They Fit Together
+
+Consider a compliance review scenario:
+
+1. The Canvas Audit Trail shows that Agent A delegated a task to Agent B on Tuesday afternoon, and that delegation passed through a human-in-the-loop Gate — a human approved the delegation before it executed.
+2. The org API key logs show that the integration named `ci-deploy-bot` was the caller on the `/delegation` endpoint, and that the same key made 12 calls over the preceding week, all to expected endpoints.
+3. The Canvas Audit Trail entry shows a green chain_valid indicator — the event chain is intact, no tamper detected.
+
+This is a complete audit picture. You can answer: what happened, who authorized it, which integration initiated it, and whether the evidence is intact.
+
+Neither layer alone tells the full story. Together, they give enterprise teams the observability posture that makes a production deployment defensible to a compliance reviewer who wasn't in the room when the agents were configured.
+
+## What Teams Typically Start With
+
+Most teams start with the Canvas Audit Trail — it's immediately visible in the UI, requires no configuration, and gives non-engineers the readability they need for a first-pass review.
+
+Org API key attribution becomes relevant once teams start integrating external CI/CD pipelines, webhook-driven automation, or third-party SaaS services that call the Molecule AI API on behalf of agents. That's when the question shifts from "what did our agents do?" to "what did our integrations do, on behalf of which agents?"
+
+## The Governance Chain
+
+Both audit layers connect to the broader Phase 30 governance story:
+
+- **Per-workspace bearer tokens** give every agent a cryptographic identity
+- **Org API key attribution** gives every integration a named identity in API logs
+- **Canvas Audit Trail** gives every agent session a tamper-evident event ledger
+
+The chain runs: integration identity (org API key prefix) → agent identity (per-workspace bearer token) → agent action (Canvas Audit Trail entry with chain_valid) → human authorization (Gate/HITL event).
+
+For enterprise buyers evaluating AI agent orchestration platforms, this is the full governance stack. It's not a feature checklist — it's a defensible production posture.
+
+## Get Started
+
+Both audit layers are live:
+
+- **Canvas Audit Trail**: open any workspace → SidePanel → Audit tab. No configuration required.
+- **Org API keys**: mint keys via Canvas UI or `POST /org/tokens`. Every call is attributed from day one.
+
+The audit story is strongest when both layers are active. Start with the Canvas Audit Trail, then add org API keys as you bring integrations online.

@@ -66,11 +66,13 @@ Workspace file deletion operations now use safe argument-passing and validate al
 
 ---
 
-## 2026-04-21 — CWE-918: SSRF in MCP / A2A Proxy Endpoints
+## 2026-04-21 — CWE-918: SSRF in MCP / A2A Proxy Endpoints (Updated: Regression Fix)
 
 **Severity:** High (CWE-918)
-**PRs:** [#1274](https://github.com/Molecule-AI/molecule-core/pull/1274), [#1302](https://github.com/Molecule-AI/molecule-core/pull/1302)
-**Affected:** `workspace-server/internal/handlers/mcp.go` — `isSafeURL`, `isPrivateOrMetadataIP`; `workspace-server/internal/handlers/a2a_proxy.go`
+**Original PRs:** [#1274](https://github.com/Molecule-AI/molecule-core/pull/1274), [#1302](https://github.com/Molecule-AI/molecule-core/pull/1302)
+**Regression Fix PR:** [#1430](https://github.com/Molecule-AI/molecule-core/pull/1430)
+**Regression introduced by:** [#1363](https://github.com/Molecule-AI/molecule-core/pull/1363)
+**Affected:** `workspace-server/internal/handlers/mcp.go` — `isSafeURL`, `isPrivateOrMetadataIP`; `workspace-server/internal/handlers/a2a_proxy.go`; `workspace-server/internal/handlers/a2a_proxy_helpers.go`
 
 ### Vulnerability
 
@@ -91,6 +93,22 @@ Workspace URL resolution and outbound HTTP calls in the MCP and A2A proxy handle
 
 URLs that fail validation return a descriptive error; requests are never sent to unsafe destinations.
 
+### SaaS Mode Gating
+
+In **SaaS mode** (`saasMode()` returns true), cross-EC2 traffic to RFC-1918 addresses is **allowed** to support legitimate cross-tenant infrastructure. Cloud metadata endpoints (`169.254.0.0/16`), link-local (`fe80::/10`), and loopback (`::1`) are **always blocked** in both SaaS and self-hosted modes.
+
+| IP range | Self-hosted | SaaS (`saasMode()`) |
+|---|---|---|
+| Cloud metadata (`169.254/16`), link-local (`fe80::/10`), loopback (`::1`) | ❌ blocked | ❌ blocked |
+| RFC-1918 (`10/8`, `172.16/12`, `192.168/16`) + IPv6 ULA (`fc00::/7`) | ❌ blocked | ✅ allowed |
+| IPv6 addresses | ✅ checked | ✅ checked |
+
+### Regression (2026-04-21)
+
+PR [#1363](https://github.com/Molecule-AI/molecule-core/pull/1363) (handler refactor) moved `isPrivateOrMetadataIP` into `a2a_proxy_helpers.go` but kept a **pre-SaaS version** that unconditionally blocked RFC-1918 addresses, breaking cross-EC2 communication in SaaS. The old version also **returned `false` for all IPv6 inputs**, fully bypassing SSRF protection for IPv6 targets.
+
+PR [#1430](https://github.com/Molecule-AI/molecule-core/pull/1430) restores the correct SaaS-gated logic and adds proper IPv6 coverage to the A2A proxy path.
+
 ### User-facing summary
 
-Platform outbound requests from workspaces (MCP tool calls, A2A proxy routing) now validate all target URLs against a comprehensive blocklist before sending. Requests to private IP ranges, cloud metadata endpoints, and loopback addresses are rejected.
+Platform outbound requests from workspaces (MCP tool calls, A2A proxy routing) validate all target URLs against a deployment-mode-aware blocklist. In self-hosted deployments, private IP ranges and cloud metadata endpoints are rejected. In SaaS mode, cross-EC2 communication is permitted while cloud metadata and loopback remain blocked, and IPv6 addresses are fully covered. Requests to unsafe destinations return a descriptive error and are never sent.

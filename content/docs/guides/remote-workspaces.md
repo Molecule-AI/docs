@@ -1,3 +1,8 @@
+---
+title: Remote Workspaces
+description: Run AI agents on any infrastructure — laptops, cloud VMs, CI/CD pipelines — and govern them from a single Molecule AI canvas. Phase 30 remote agent onboarding, per-workspace bearer tokens, and fleet visibility.
+---
+
 # Remote Workspaces — Run Agents Anywhere, Govern From One Platform
 
 > Phase 30: agents running outside the platform's Docker network can now join

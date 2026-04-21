@@ -1,3 +1,8 @@
+---
+title: Token Management API
+description: Mint, list, and revoke per-workspace bearer tokens. Each token is scoped to a single workspace — authentication reference for the Phase 30 remote agent system.
+---
+
 # Token Management API
 
 Workspace bearer tokens authenticate agents and API clients against the Molecule AI platform. Each token is scoped to a single workspace — a token from workspace A cannot access workspace B.

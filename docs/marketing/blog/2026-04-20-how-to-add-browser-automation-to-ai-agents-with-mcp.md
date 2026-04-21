@@ -50,19 +50,39 @@ For an AI agent that needs to *understand* and *act on* a web page, CDP is the p
 - Python 3.10 or higher
 - Google Chrome (any recent version)
 - Molecule AI SDK (`pip install molecule-ai`)
-- A basic Molecule AI API key ([get one here](https://docs.molecule.ai/getting-started))
+- A Molecule AI workspace — [get started in under 5 minutes](/docs/quickstart)
 
 ---
 
 ## Step-by-Step Setup
 
-### 1. Install the Chrome DevTools MCP Server
+### 1. Start Chrome with Remote Debugging
+
+Chrome exposes CDP over a WebSocket at a configurable port. Start Chrome with remote debugging enabled:
 
 ```bash
-pip install mcp-server-chrome
+# macOS
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir=/tmp/chrome-debug
+
+# Linux
+google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug
+
+# Windows
+chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\tmp\chrome-debug"
 ```
 
-This installs the MCP server that bridges your agent to Chrome's DevTools Protocol.
+To run headless (no visible window):
+
+```bash
+google-chrome \
+  --headless \
+  --remote-debugging-port=9222 \
+  --user-data-dir=/tmp/chrome-headless
+```
+
+**Note:** Ensure no other Chrome instance is already using port 9222.
 
 ### 2. Configure Molecule AI to Load the MCP Server
 
@@ -148,7 +168,7 @@ Open https://example-app-staging.vercel.app/pricing.
 Check every CTA button on the page. For each one:
 1. Verify the button has a click handler (not disabled or missing onClick).
 2. Click it and confirm the navigation or modal behavior is correct.
-3. Report any button that is broken, broken, or leads to a 404.
+3. Report any button that is broken or leads to a 404.
 
 If all buttons pass, say "All CTA buttons functional."
 """
@@ -207,14 +227,14 @@ The agent coordinates across three MCP tools as naturally as it would use a sing
 
 ## Get Started
 
-Ready to build your first browser-aware AI agent? Here's the quick-path:
+Ready to build your first browser-aware AI agent? Here's the quick path:
 
-1. **[Get a Molecule AI API key](https://docs.molecule.ai/getting-started)** — free tier available.
-2. **[Read the MCP documentation](https://docs.molecule.ai/mcp)** — full reference for all supported servers.
-3. **[Browse MCP Marketplace](https://mcp.market)** — community-maintained MCP servers for Slack, Notion, Stripe, and 200+ more tools.
+1. **[Create a Molecule AI workspace](/docs/quickstart)** — free, self-hostable.
+2. **[Read the MCP Server reference](/docs/mcp-server)** — full reference for all supported servers.
+3. **[Browse the Chrome DevTools MCP setup guide](/docs/guides/chrome-devtools-mcp-setup)** — setup walkthrough and available tools.
 
 Once your agent is connected to MCP, it stops being a chatbot with a scrollable output. It becomes an actor that can navigate the web, inspect reality, and take action in the world.
 
 ---
 
-*Have questions or want to share what you're building with MCP? Drop us a note at hello@molecule.ai or reach out in the Molecule AI community Slack.*
+*Have questions or want to share what you're building with MCP? Open a discussion on [GitHub Discussions](https://github.com/Molecule-AI/molecule-core/discussions) or file an issue with the `enhancement` label.*

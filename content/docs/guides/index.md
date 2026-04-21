@@ -21,3 +21,7 @@ Step-by-step guides for common Molecule AI integrations and configurations.
 
 - [Org-Scoped API Keys](/docs/guides/org-api-keys) — Mint, audit, and revoke named API keys for organization-level access. Replace `ADMIN_TOKEN` with scoped credentials for scripts, agents, and CI.
 - [Workspace Auth Tokens](/docs/architecture/workspace-auth-tokens) — Technical deep-dive on per-workspace bearer token authentication (Phase 30.1).
+
+## Skills
+
+- [Skill Catalog](/docs/guides/skill-catalog) — Install, manage, and publish skills for browser automation, TTS, image generation, web search, and more. Covers CLI commands, version pinning, and the skill lifecycle.

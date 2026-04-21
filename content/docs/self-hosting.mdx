@@ -139,6 +139,26 @@ Override per-tier memory and CPU caps for workspace containers. CPU\_SHARES foll
 |----------|---------|-------------|
 | `CANVAS_PROXY_URL` | -- | When set, the Go server proxies canvas requests to this URL |
 | `MOLECULE_ORG_ID` | -- | UUID for multi-tenant isolation; leave unset for self-hosted |
+| `MOLECULE_DEPLOY_MODE` | `self-hosted` | Set to `saas` to enable SaaS-specific behaviors. See [Deploy Mode](#deploy-mode) below. |
+
+### Deploy Mode
+
+The `MOLECULE_DEPLOY_MODE` variable controls platform behavior that differs between
+multi-tenant SaaS and self-hosted deployments.
+
+| Mode | Signal | Notes |
+|------|--------|-------|
+| `self-hosted` | `MOLECULE_DEPLOY_MODE=self-hosted` or `MOLECULE_ORG_ID` unset | Default. RFC-1918 / IPv6 ULA IPs blocked in SSRF checks. |
+| `saas` | `MOLECULE_DEPLOY_MODE=saas` | Allows VPC-private IPs (RFC-1918 / IPv6 ULA) in agent registration URLs. Cloud metadata (169.254.x.x), link-local, loopback, and TEST-NET ranges stay blocked unconditionally in both modes. |
+
+**SaaS mode is detected in priority order:**
+1. `MOLECULE_DEPLOY_MODE=saas` — preferred explicit flag
+2. `MOLECULE_ORG_ID` presence — legacy implicit signal (kept for back-compat)
+
+In SaaS mode, workspaces running on sibling EC2 instances within the same VPC can
+register with their VPC-private IPs (e.g. `172.31.x.x` on AWS default VPCs). Without
+SaaS mode set, these IPs would be blocked by the SSRF check, causing workspace
+registration to fail silently and time out after 10 minutes.
 
 ## Production Deployment
 

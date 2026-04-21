@@ -167,6 +167,38 @@ Peer discovery and access control verification.
 |--------|------|------|-------------|
 | POST | `/workspaces/:id/a2a` | CanCommunicate | Proxy an A2A JSON-RPC message to the target workspace. Caller identified via `X-Workspace-ID` header. Canvas requests (no header) bypass access check. On connection error, checks if container is dead and triggers auto-restart. |
 
+#### SSRF Protection on Outbound Calls
+
+`POST /workspaces/:id/a2a` (A2A proxy) validates all outbound URLs before connecting,
+preventing server-side request forgery (CWE-918). The check runs in two stages:
+
+1. **Scheme check** — only `http://` and `https://` are allowed; `file://`, `gopher://`, etc. are rejected.
+2. **Host/IP check** — resolves the hostname and validates each returned IP against the blocklist.
+
+**Blocked in all modes (self-hosted and SaaS):**
+
+- Loopback (`127.0.0.0/8`, `::1`)
+- Unspecified (`0.0.0.0`, `::`)
+- Link-local (`169.254.0.0/16`, `fe80::/10`)
+- Cloud metadata (`169.254.x.x`) — IMDSv1/v2 analogue
+- TEST-NET ranges (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`)
+- CGNAT (`100.64.0.0/10`)
+
+**Self-hosted mode** (`MOLECULE_DEPLOY_MODE=self-hosted` or unset): RFC-1918 private
+IPs (`10.0.0.0/8`, `172.16.0.0/12`, `172.16.0.0/12`, `192.168.0.0/16`) and IPv6 ULA
+(`fc00::/7`) are also blocked. This prevents a compromised workspace from reaching
+internal infrastructure via the platform's outbound connection.
+
+**SaaS mode** (`MOLECULE_DEPLOY_MODE=saas`): VPC-private IPs (RFC-1918, IPv6 ULA) are
+**allowed** — required because SaaS workspaces on sibling EC2 instances register with
+their VPC-private IPs. Cloud metadata, loopback, and link-local stay blocked
+unconditionally.
+
+**IPv6 fix (PRs #1292, #1302, #1364):** The IP validation now correctly handles
+both IPv4 and IPv6 addresses. Pre-fix, the function returned `false` for all
+non-IPv4 inputs, which meant a registered `[::1]` or `[fe80::…]` URL would bypass
+the SSRF gate entirely.
+
 ### Delegation
 
 | Method | Path | Auth | Description |

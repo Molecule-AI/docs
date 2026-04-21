@@ -17,11 +17,16 @@ Entries are published daily at 23:50 UTC.
   [#1310](https://github.com/Molecule-AI/molecule-core/pull/1310))
 - **SSRF defence backport** — `a2a_proxy.go` now validates all outbound URLs with `isSafeURL` before connecting, closing a server-side request forgery vector on the delegation endpoint (CWE-918). Backported from PR #1292.
   ([#1302](https://github.com/Molecule-AI/molecule-core/pull/1302))
+- **SSRF whitelist in SaaS mode + IPv6 fix** — `isPrivateOrMetadataIP` now allows VPC-private IPs (RFC-1918, IPv6 ULA) in agent registration URLs when `MOLECULE_DEPLOY_MODE=saas`, unblocking cross-EC2 SaaS workspace registration. Cloud metadata, loopback, and link-local stay blocked unconditionally. Also fixes IPv6 SSRF bypass: previously any non-IPv4 input returned `false`, letting `[::1]` or `[fe80::…]` URLs bypass the SSRF gate entirely.
+  ([#1364](https://github.com/Molecule-AI/molecule-core/pull/1364))
 - **HMAC chain verification guard** — audit ledger chain verification now guards against slice truncation on very short HMAC values, preventing a panic when verifying entries with fewer than 32 bytes.
-  ([#1339](https://github.com/Molecule-AI/molecule-core/pull/1339))
+  ([#1339](https://github.com/Molecule-AI/molecule-core/pull/1339),
+  [#1352](https://github.com/Molecule-AI/molecule-core/pull/1352))
 
 ### 🔧 Fixes
 
+- **SaaS workspace registration unblocked** — four bugs were blocking workspace registration end-to-end on cross-EC2 SaaS deployments: (1) VPC-private IPs (10.x.x.x, 172.31.x.x) blocked by SSRF check; (2) IPv6 agent URLs bypassing SSRF entirely; (3) orphan tokens created by redundant `IssueToken` call in `provisionWorkspaceCP`; (4) EC2 user-data workspace-timeout default not Docker-aware. Each failed silently with a 10-minute "Provisioning Timeout". Self-hosted deployments are unaffected.
+  ([#1364](https://github.com/Molecule-AI/molecule-core/pull/1364))
 - **Workspace orchestrator fail-fast on missing `WORKSPACE_ID`** — orchestrator now exits immediately with a clear error if `WORKSPACE_ID` is unset or empty, rather than proceeding with a nil workspace. Prevents silent failures and confusing downstream errors.
   ([#1336](https://github.com/Molecule-AI/molecule-core/pull/1336))
 - **Sweeper emits `WORKSPACE_PROVISION_FAILED`** — previously emitted `WORKSPACE_PROVISION_TIMEOUT`, which mapped to `degraded` rather than `failed`. The canvas now correctly shows the stuck workspace as failed and surfaces the error banner.

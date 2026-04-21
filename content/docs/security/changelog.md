@@ -78,20 +78,20 @@ Workspace file deletion operations now use safe argument-passing and validate al
 
 Workspace URL resolution and outbound HTTP calls in the MCP and A2A proxy handlers did not validate that the target address was reachable from the platform. Without validation, a malicious workspace configuration could redirect platform requests to internal infrastructure (cloud metadata services, RFC-1918 databases, link-local monitoring endpoints) or loopback interfaces.
 
+Additionally, `isPrivateOrMetadataIP` returned `false` for all non-IPv4 inputs, meaning registered IPv6 URLs (`[::1]`, `[fe80::…]`) bypassed the SSRF gate entirely.
+
 ### Fix
 
 `isSafeURL` validates every outbound URL before making an HTTP request:
 
 - **Scheme enforcement:** Only `http` and `https` are allowed.
-- **Direct IP checks:** Loopback (`127.0.0.0/8`), unspecified (`0.0.0.0`), and link-local (`fe80::/10`) addresses are blocked.
+- **Direct IP checks:** Loopback (`127.0.0.0/8`), unspecified (`0.0.0.0`), link-local (`fe80::/10`), and IPv6-mapped loopback addresses are blocked.
 - **Private IP range blocking** via `isPrivateOrMetadataIP`:
-  - RFC-1918 private: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
-  - CGNAT shared address space: `100.64.0.0/10`
-  - Cloud metadata services: `169.254.0.0/16`
-  - Documentation and test ranges: `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`
+  - Cloud metadata and reserved ranges (always blocked): `169.254.0.0/16`, `100.64.0.0/10`, `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`
+  - RFC-1918 private and IPv6 ULA (`fc00::/7`): blocked in self-hosted mode; **allowed in SaaS mode** (see below)
 - **DNS rebinding defense:** Hostnames are resolved, and each resolved IP is checked against the blocklist. DNS resolution failures block the request entirely.
 
-URLs that fail validation return a descriptive error; requests are never sent to unsafe destinations.
+**SaaS-mode exception:** Set `MOLECULE_DEPLOY_MODE=saas` (or leave `MOLECULE_ORG_ID` set) to allow VPC-private IPs (RFC-1918, IPv6 ULA) in workspace registration URLs. Required for cross-EC2 SaaS deployments where workspaces register with their VPC-private IPs (e.g. `172.31.x.x` on AWS default VPCs). Cloud metadata, loopback, and link-local stay blocked unconditionally in both modes.
 
 ### SaaS Mode Gating
 
@@ -112,3 +112,53 @@ PR [#1430](https://github.com/Molecule-AI/molecule-core/pull/1430) restores the 
 ### User-facing summary
 
 Platform outbound requests from workspaces (MCP tool calls, A2A proxy routing) validate all target URLs against a deployment-mode-aware blocklist. In self-hosted deployments, private IP ranges and cloud metadata endpoints are rejected. In SaaS mode, cross-EC2 communication is permitted while cloud metadata and loopback remain blocked, and IPv6 addresses are fully covered. Requests to unsafe destinations return a descriptive error and are never sent.
+
+---
+
+## 2026-04-21 — Audit Ledger HMAC Chain Guard
+
+**Severity:** Low (denial-of-service / data integrity)
+**PRs:** [#1339](https://github.com/Molecule-AI/molecule-core/pull/1339), [#1352](https://github.com/Molecule-AI/molecule-core/pull/1352), [#1354](https://github.com/Molecule-AI/molecule-core/pull/1354) (backport to `main`)
+**Affected:** `workspace-server/internal/handlers/audit.go`
+
+### Vulnerability
+
+`verifyAuditChain` called `hex.Decode` on HMAC values without checking the slice length first. Entries with fewer than 32 bytes would panic at runtime, causing a goroutine crash and returning a 500 error for any audit chain verification request.
+
+### Fix
+
+Added a length check before `hex.Decode`:
+
+```go
+if len(hmacHex) < 64 { // 32 bytes = 64 hex chars
+    return false, fmt.Errorf("HMAC value too short")
+}
+```
+
+### User-facing summary
+
+Audit chain verification now handles short or malformed HMAC values gracefully, returning `chain_valid: false` instead of a server error.
+
+---
+
+## 2026-04-21 — Credential Scrub: `err.Error()` Leak Prevention
+
+**Severity:** Medium (information disclosure)
+**PRs:** [#1282](https://github.com/Molecule-AI/molecule-core/pull/1282), [#1355](https://github.com/Molecule-AI/molecule-core/pull/1355), [#1359](https://github.com/Molecule-AI/molecule-core/pull/1359)
+**Affected:** `workspace-server/internal/handlers/plugins_install_pipeline.go`, `workspace-server/internal/handlers/workspace_provision.go`, `content/docs/incidents/INCIDENT_LOG.md`
+
+### Vulnerability
+
+Error messages returned from platform handler functions used `err.Error()` directly in log output and API error responses. When `err` was a credentials-related error (e.g. AWS `AuthFailure`, cloud API key expiry), sensitive credential fragments could appear in logs, error responses, and the `INCIDENT_LOG.md` documentation file.
+
+Additionally, the `INCIDENT_LOG.md` file itself contained real credential values in some historical entries.
+
+### Fix
+
+- Replaced direct `err.Error()` calls with structured error wrapping that strips credential-like patterns (AWS access key IDs, bearer tokens) before returning or logging.
+- Credential values scrubbed from `INCIDENT_LOG.md` historical entries.
+- Workspace orchestrator now exits immediately with a named error if `WORKSPACE_ID` is unset or empty, preventing nil-workspace crashes that could surface cryptic errors.
+
+### User-facing summary
+
+Error messages and logs no longer leak credential fragments. Platform handles missing `WORKSPACE_ID` gracefully with a clear startup error rather than a cryptic crash.

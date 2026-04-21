@@ -1,3 +1,8 @@
+---
+title: Glossary
+description: Molecule AI terminology vs. ecosystem neighbors — workspace, agent, plugin, harness, flow, and more defined with cross-framework comparisons.
+---
+
 # Glossary — Molecule AI terminology vs. ecosystem neighbors
 
 The agent-infra ecosystem has coalesced around a common vocabulary that

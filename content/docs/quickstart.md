@@ -75,7 +75,7 @@ Or type `/ask what's our deployment status?` in your connected Discord channel.
 
 - [Connect MCP servers for browser automation](/docs/guides/chrome-devtools-mcp-setup)
 - [Configure org-scoped API keys for team access](/blog/org-api-keys)
-- [Review the full REST API reference](/docs/mcp-server)
-- [Set up the agent hierarchy — Community Manager + sub-agents](/docs/architecture)
+- [Review the REST API reference](/docs/guides/org-api-keys)
+- [Browse all guides](/docs/guides)
 
 Explore the [GitHub repo](https://github.com/Molecule-AI/molecule-core) for self-hosting options, or visit [moleculesai.app](https://moleculesai.app) for the hosted platform.

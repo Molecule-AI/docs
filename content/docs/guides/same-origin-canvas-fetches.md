@@ -1,3 +1,8 @@
+---
+title: Same-Origin Canvas Fetches
+description: How Molecule AI's SaaS Canvas makes browser API calls to two backends through one origin — and how the /cp/* reverse proxy enables multi-tenant deployments.
+---
+
 # Same-Origin Canvas Fetches — the /cp/* Reverse Proxy
 
 > How Molecule AI's SaaS Canvas makes browser API calls to two backends

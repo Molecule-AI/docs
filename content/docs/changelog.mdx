@@ -8,6 +8,36 @@ Entries are published daily at 23:50 UTC.
 
 ---
 
+## 2026-04-21
+
+### 🔒 Security
+
+- **CWE-22 path traversal protection** — `copyFilesToContainer` now validates file paths at the tar-archive-write boundary, preventing writes outside the workspace volume mount. Handler-level `validateRelPath` is defense-in-depth — do not remove. Affects `PUT /workspaces/:id/files/*path` and `DELETE /workspaces/:id/files/*path`.
+  ([#1267](https://github.com/Molecule-AI/molecule-core/pull/1267),
+  [#1270](https://github.com/Molecule-AI/molecule-core/pull/1270),
+  [#1281](https://github.com/Molecule-AI/molecule-core/pull/1281))
+
+### 🔧 Fixes
+
+- **Sweeper emits `WORKSPACE_PROVISION_FAILED`** — previously emitted `WORKSPACE_PROVISION_TIMEOUT`, which mapped to `degraded` rather than `failed`. The canvas now correctly shows the stuck workspace as failed and surfaces the error banner.
+  ([#1262](https://github.com/Molecule-AI/molecule-core/pull/1262))
+- **Org-token callers get `org_id` in Gin context** — `wsauth_middleware` now sets `org_id` on the context for org-token (not just workspace-token) callers, fixing a regression from `#1218`.
+  ([#1258](https://github.com/Molecule-AI/molecule-core/pull/1258),
+  [#1253](https://github.com/Molecule-AI/molecule-core/pull/1253))
+- **Canvas cascade-delete UX** — workspace delete now warns before removing workspaces with children, preventing accidental bulk deletion.
+  ([#1252](https://github.com/Molecule-AI/molecule-core/pull/1252))
+- **Canvas metrics null-safety** — workspace usage panel no longer crashes on partial `{}` API responses.
+  ([#1250](https://github.com/Molecule-AI/molecule-core/pull/1250))
+- **Scheduler post-fire dedicated context** — F1089 follow-up: uses a dedicated context for the post-fire `UPDATE` instead of the parent context, preventing cancellation race.
+  ([#1244](https://github.com/Molecule-AI/molecule-core/pull/1244))
+
+### 📚 Documentation
+
+- **Workspace File Copy API reference** — full reference for `PUT /workspaces/:id/files/*path` including CWE-22 path traversal protection, error codes, and curl examples.
+  ([molecule-core#1281](https://github.com/Molecule-AI/molecule-core/pull/1281))
+
+---
+
 ## 2026-04-20
 
 ### 🚀 New features

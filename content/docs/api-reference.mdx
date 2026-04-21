@@ -274,6 +274,69 @@ Workspace file management. Files are stored in the workspace's config directory.
 | DELETE | `/workspaces/:id/files/*path` | WorkspaceAuth | Delete a file. |
 | GET | `/workspaces/:id/shared-context` | WorkspaceAuth | Get the shared context files for a workspace (aggregated from parent hierarchy). |
 
+### Path Traversal Protection (CWE-22)
+
+`PUT /workspaces/:id/files/*path` and `DELETE /workspaces/:id/files/*path` implement
+defense-in-depth CWE-22 path traversal protection against malicious filenames in
+archive writes.
+
+**Source:** `workspace-server/internal/handlers/container_files.go`
+**Handler:** `TemplatesHandler.WriteFile` → `copyFilesToContainer`
+**Related PRs:** [#1267](https://github.com/Molecule-AI/molecule-core/pull/1267),
+[#1270](https://github.com/Molecule-AI/molecule-core/pull/1270),
+[#1281](https://github.com/Molecule-AI/molecule-core/pull/1281)
+
+**Validation at two layers:**
+
+1. **Handler-level** (`validateRelPath`): Called before any container write. Rejects
+   absolute paths and `..` parent-directory traversal sequences at the HTTP handler.
+   Returns `400 Bad Request` with `{"error": "invalid path"}`.
+
+2. **Archive-write boundary** (`copyFilesToContainer`): Validated again at tar header
+   generation. This catches any future caller that bypasses the handler level:
+
+   ```go
+   // UNSAFE (pre-PRs #1267/#1270): map key used directly as tar header name
+   header := &tar.Header{Name: name, ...}
+
+   // SAFE (post-PRs #1267/#1270): validated and joined to destPath
+   clean := filepath.Clean(name)
+   if filepath.IsAbs(clean) || strings.HasPrefix(clean, "..") {
+       return fmt.Errorf("unsafe file path in archive: %s", name)
+   }
+   archiveName := filepath.Join(destPath, name)
+   header := &tar.Header{Name: archiveName, ...}
+   ```
+
+   Validation uses three stages:
+   - `filepath.Clean` normalizes the path
+   - `filepath.IsAbs` rejects OS-absolute paths
+   - `strings.HasPrefix(clean, "..")` rejects parent-directory escapes
+
+   The resulting `archiveName` is always inside `destPath` (typically `/configs`), so
+   the tar header can never write outside the volume mount regardless of input.
+
+**Error codes for path traversal:**
+
+| Status | Condition | Response |
+|--------|-----------|----------|
+| `400` | Traversal attempt detected | `{"error": "invalid path"}` |
+| `404` | Workspace not found | `{"error": "workspace not found"}` |
+| `500` | Docker unavailable | `{"error": "failed to write file: docker not available"}` |
+
+**Example — write a file:**
+
+```bash
+curl -X PUT https://api.moleculesai.app/workspaces/ws-abc123/files/claude.md \
+  -H "Authorization: Bearer <workspace-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"content": "# My Agent\n\nSpecializes in code review.\n"}'
+```
+
+**Success:** `200 OK` with `{"status": "saved", "path": "claude.md"}`
+
+**Path traversal rejected:** `400 Bad Request` with `{"error": "invalid path"}`
+
 ---
 
 ## Activity

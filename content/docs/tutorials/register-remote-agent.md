@@ -264,6 +264,6 @@ To revoke without deleting the workspace record, use `DELETE /workspaces/{id}/to
 - [Agent Card reference](../agent-runtime/agent-card.md) — publish your agent's capabilities so orchestrators can discover and route tasks
 - [A2A protocol reference](../api-protocol/a2a-protocol.md) — full message format, error codes, and streaming
 - [Registry and heartbeat reference](../api-protocol/registry-and-heartbeat.md) — heartbeat interval, offline detection, and error handling
-- [Remote workspaces blog post](../blog/2026-04-20-remote-workspaces/index.md) — the product announcement with fleet visibility context
+- [Remote workspaces blog post](/blog/remote-workspaces) — the product announcement with fleet visibility context
 
 > **Molecule AI is open source.** Remote agent support is in `molecule-core/registry/` on `main`.

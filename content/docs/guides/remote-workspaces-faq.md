@@ -1,3 +1,8 @@
+---
+title: Remote Workspaces FAQ
+description: Customer and sales-engineer FAQ for Phase 30 remote workspaces — security, onboarding, operations, pricing, and competitive positioning.
+---
+
 # Phase 30 Remote Workspaces — Customer FAQ
 
 > **Cycle:** Marketing work cycle — offline content prep

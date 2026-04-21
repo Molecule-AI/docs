@@ -1,0 +1,45 @@
+---
+title: "Join the Molecule AI Beta: How Early Access Works"
+description: "Molecule AI runs a beta allowlist. If you're not on it yet, the waitlist page is where you claim your spot — and tell us what you're planning to build."
+publishedAt: 2026-04-20
+---
+
+When Molecule AI launched its early access program, the team faced a familiar problem: you can't let everyone in at once, but you also can't afford to lose the people who want in. A "sorry, you're not on the list" dead-end is the fastest way to kill a potential customer's enthusiasm.
+
+That's why Molecule AI built the `/waitlist` page — and why it matters more than a generic "sign up for updates" form.
+
+## What the Waitlist Page Actually Does
+
+When someone attempts to log in via WorkOS and their email isn't on the beta allowlist, the platform doesn't show an error — it redirects them to `/waitlist`. There, they're greeted with a short explanation of what Molecule AI does, and a form that asks for three things:
+
+- **Email address** — so we can notify them when a spot opens
+- **Name** (optional) — so we can personalize that notification
+- **Use case** (optional) — so the team can prioritize the right kinds of teams first
+
+The form posts to `/cp/waitlist/request`, which stores the submission server-side. If the same email submits again within an hour, the backend returns a soft dedup response — the submission is noted, but the user sees a gentler "we already have you" message instead of a hard rejection.
+
+## Privacy: No URL Prefill, No Surprise Leaks
+
+Here's the detail that separates a thoughtful waitlist page from a careless one: the `/waitlist` form does not pre-fill the email from a URL parameter.
+
+In earlier implementations, some platforms passed `?email=user@example.com` as a query parameter in the redirect URL. It's convenient — the user doesn't have to type their email twice — but it means that email appears in server logs, browser history, shared links, and analytics tools that grab query strings. That's not acceptable when the data is a personal identifier.
+
+Molecule AI's `/waitlist` page was designed with this in mind from the start. Even if a bookmarked or cached redirect URL still carries `?email=`, the client-side code deliberately ignores it. The user re-enters their email themselves.
+
+## What Happens After You Submit
+
+Submissions flow into the Molecule AI backend, where the team can review them alongside the allowlist. High-signal signals — specific use cases, teams with existing agent infrastructure, organizations evaluating AI orchestration platforms — move faster. Generic "interested in AI" submissions still get through, but the team has the context to prioritize.
+
+There's no public waitlist count, no estimated wait time, no "you're #847 in line" anxiety. The team reaches out directly when a spot is ready.
+
+## The Launch CTA Angle
+
+For teams watching Molecule AI's trajectory, the `/waitlist` page is also a signal: this is an active, evolving product with a selective early access program, not a vapor-ware launch. When the platform is ready for a broader launch, the waitlist becomes the first cohort of production users — the ones who shaped the product through feedback.
+
+If you're evaluating AI agent orchestration platforms, submitting to the waitlist now means you're in the room when the next round of decisions gets made.
+
+## How to Submit
+
+Visit the `/waitlist` page after attempting to log in. If you haven't tried to log in yet, the page will accept your email directly. Fill in your use case — the more specific, the better. Someone on the Molecule AI team will follow up.
+
+Molecule AI is in active development. The fleet visibility, org-scoped API keys, and multi-cloud agent support shipped in Phase 30. If those features map to a problem you're trying to solve, the waitlist is where you get in.

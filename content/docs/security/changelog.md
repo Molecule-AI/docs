@@ -127,7 +127,7 @@ Audit chain verification now handles short or malformed HMAC values gracefully, 
 
 **Severity:** Medium (information disclosure)
 **PRs:** [#1282](https://github.com/Molecule-AI/molecule-core/pull/1282), [#1355](https://github.com/Molecule-AI/molecule-core/pull/1355), [#1359](https://github.com/Molecule-AI/molecule-core/pull/1359)
-**Affected:** `workspace-server/internal/handlers/plugins_install_pipeline.go`, `workspace-server/internal/handlers/workspace_provision.go`, `docs/incidents/INCIDENT_LOG.md`
+**Affected:** `workspace-server/internal/handlers/plugins_install_pipeline.go`, `workspace-server/internal/handlers/workspace_provision.go`, `content/docs/incidents/INCIDENT_LOG.md`
 
 ### Vulnerability
 

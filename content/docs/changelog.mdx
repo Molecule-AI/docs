@@ -12,13 +12,18 @@ Entries are published daily at 23:50 UTC.
 
 ### 🔒 Security
 
-- **CWE-22 path traversal protection** — `copyFilesToContainer` now validates file paths at the tar-archive-write boundary, preventing writes outside the workspace volume mount. Handler-level `validateRelPath` is defense-in-depth — do not remove. Affects `PUT /workspaces/:id/files/*path` and `DELETE /workspaces/:id/files/*path`.
-  ([#1267](https://github.com/Molecule-AI/molecule-core/pull/1267),
-  [#1270](https://github.com/Molecule-AI/molecule-core/pull/1270),
-  [#1281](https://github.com/Molecule-AI/molecule-core/pull/1281))
+- **CWE-22 path traversal + CWE-78 shell injection protection** — `deleteViaEphemeral` now calls `validateRelPath` before creating the Alpine cleanup container, and passes the file path as discrete exec-form arguments rather than interpolating into a shell string. A malicious `filePath` containing `; rm -rf /` can no longer reach a shell. Affects `DELETE /workspaces/:id/files/*path`.
+  ([#1271](https://github.com/Molecule-AI/molecule-core/pull/1271),
+  [#1310](https://github.com/Molecule-AI/molecule-core/pull/1310))
+- **SSRF defence backport** — `a2a_proxy.go` now validates all outbound URLs with `isSafeURL` before connecting, closing a server-side request forgery vector on the delegation endpoint (CWE-918). Backported from PR #1292.
+  ([#1302](https://github.com/Molecule-AI/molecule-core/pull/1302))
+- **HMAC chain verification guard** — audit ledger chain verification now guards against slice truncation on very short HMAC values, preventing a panic when verifying entries with fewer than 32 bytes.
+  ([#1339](https://github.com/Molecule-AI/molecule-core/pull/1339))
 
 ### 🔧 Fixes
 
+- **Workspace orchestrator fail-fast on missing `WORKSPACE_ID`** — orchestrator now exits immediately with a clear error if `WORKSPACE_ID` is unset or empty, rather than proceeding with a nil workspace. Prevents silent failures and confusing downstream errors.
+  ([#1336](https://github.com/Molecule-AI/molecule-core/pull/1336))
 - **Sweeper emits `WORKSPACE_PROVISION_FAILED`** — previously emitted `WORKSPACE_PROVISION_TIMEOUT`, which mapped to `degraded` rather than `failed`. The canvas now correctly shows the stuck workspace as failed and surfaces the error banner.
   ([#1262](https://github.com/Molecule-AI/molecule-core/pull/1262))
 - **Org-token callers get `org_id` in Gin context** — `wsauth_middleware` now sets `org_id` on the context for org-token (not just workspace-token) callers, fixing a regression from `#1218`.
@@ -30,10 +35,12 @@ Entries are published daily at 23:50 UTC.
   ([#1250](https://github.com/Molecule-AI/molecule-core/pull/1250))
 - **Scheduler post-fire dedicated context** — F1089 follow-up: uses a dedicated context for the post-fire `UPDATE` instead of the parent context, preventing cancellation race.
   ([#1244](https://github.com/Molecule-AI/molecule-core/pull/1244))
+- **Duplicate `ContainerWait` loop removed** — `deleteViaEphemeral` no longer calls `ContainerWait` twice on the same container. Removed redundant second wait.
+  ([#1337](https://github.com/Molecule-AI/molecule-core/pull/1337))
 
 ### 📚 Documentation
 
-- **Workspace File Copy API reference** — full reference for `PUT /workspaces/:id/files/*path` including CWE-22 path traversal protection, error codes, and curl examples.
+- **Workspace File Copy API reference** — full reference for `PUT /workspaces/:id/files/*path` including CWE-22 path traversal protection, CWE-78 shell injection prevention, error codes, and curl examples.
   ([molecule-core#1281](https://github.com/Molecule-AI/molecule-core/pull/1281))
 
 ---

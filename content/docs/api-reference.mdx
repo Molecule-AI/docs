@@ -274,19 +274,24 @@ Workspace file management. Files are stored in the workspace's config directory.
 | DELETE | `/workspaces/:id/files/*path` | WorkspaceAuth | Delete a file. |
 | GET | `/workspaces/:id/shared-context` | WorkspaceAuth | Get the shared context files for a workspace (aggregated from parent hierarchy). |
 
-### Path Traversal Protection (CWE-22)
+### Path Traversal and Shell Injection Protection (CWE-22 / CWE-78)
 
 `PUT /workspaces/:id/files/*path` and `DELETE /workspaces/:id/files/*path` implement
-defense-in-depth CWE-22 path traversal protection against malicious filenames in
-archive writes.
+defense-in-depth protection against two distinct attack vectors:
+
+- **CWE-22** (path traversal): malicious filenames in archive writes or file delete paths.
+- **CWE-78** (OS command injection): malicious file paths passed to shell subprocesses.
 
 **Source:** `workspace-server/internal/handlers/container_files.go`
-**Handler:** `TemplatesHandler.WriteFile` → `copyFilesToContainer`
-**Related PRs:** [#1267](https://github.com/Molecule-AI/molecule-core/pull/1267),
+**Handlers:** `TemplatesHandler.WriteFile` → `copyFilesToContainer`;
+`TemplatesHandler.DeleteFile` → `deleteViaEphemeral`
+**Related PRs:**
+[#1267](https://github.com/Molecule-AI/molecule-core/pull/1267),
 [#1270](https://github.com/Molecule-AI/molecule-core/pull/1270),
-[#1281](https://github.com/Molecule-AI/molecule-core/pull/1281)
+[#1271](https://github.com/Molecule-AI/molecule-core/pull/1271),
+[#1310](https://github.com/Molecule-AI/molecule-core/pull/1310)
 
-**Validation at two layers:**
+**Validation for `PUT /workspaces/:id/files/*path` (write) — two layers:**
 
 1. **Handler-level** (`validateRelPath`): Called before any container write. Rejects
    absolute paths and `..` parent-directory traversal sequences at the HTTP handler.
@@ -316,13 +321,40 @@ archive writes.
    The resulting `archiveName` is always inside `destPath` (typically `/configs`), so
    the tar header can never write outside the volume mount regardless of input.
 
-**Error codes for path traversal:**
+**Validation for `DELETE /workspaces/:id/files/*path` (delete) — CWE-78 shell injection:**
+
+`deleteViaEphemeral` launches an Alpine container to remove a file from the config
+volume. Before PR #1310, the file path was concatenated into a shell string:
+
+```go
+// UNSAFE (pre-PR #1310): string interpolation into shell command
+Cmd: []string{"rm", "-rf", "/configs/" + filePath}
+```
+
+A path such as `"; rm -rf /; echo "` could inject arbitrary shell commands. PR #1310
+introduces two protections:
+
+1. **`validateRelPath` call** at the top of `deleteViaEphemeral` — the same validation
+   used for writes, rejecting `..` traversal and absolute paths before any container
+   is created.
+2. **Exec form** — the `rm` command is now passed as discrete arguments, not
+   interpolated into a shell string:
+
+   ```go
+   // SAFE (post-PR #1310): exec form, no shell interpolation
+   Cmd: []string{"rm", "-rf", "/configs", filePath}
+   ```
+
+   With `[]string{...}` form, the file path is a plain argument to `rm` — not processed
+   by a shell. Even if `filePath` contains shell metacharacters, they have no effect.
+
+**Error codes for path traversal and shell injection:**
 
 | Status | Condition | Response |
 |--------|-----------|----------|
-| `400` | Traversal attempt detected | `{"error": "invalid path"}` |
+| `400` | Traversal or shell injection attempt detected | `{"error": "invalid path"}` |
 | `404` | Workspace not found | `{"error": "workspace not found"}` |
-| `500` | Docker unavailable | `{"error": "failed to write file: docker not available"}` |
+| `500` | Docker unavailable | `{"error": "failed to write/delete file: docker not available"}` |
 
 **Example — write a file:**
 

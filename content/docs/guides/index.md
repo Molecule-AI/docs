@@ -9,7 +9,7 @@ Step-by-step guides for common Molecule AI integrations and configurations.
 ## Remote Agents
 
 - [External Agent Registration](/docs/guides/external-agent-registration) — Register agents running outside the platform Docker network (on laptops, cloud VMs, edge devices) as first-class workspaces with per-workspace bearer tokens.
-- [Remote Workspaces FAQ](/docs/guides/remote-workspaces) — Common questions about running agents outside the platform's Docker network.
+- [Remote Workspaces FAQ](/docs/guides/remote-workspaces-faq) — Common customer and sales-engineer questions about running agents outside the platform's Docker network.
 - [Token Management API](/docs/guides/token-management) — Mint, list, and revoke per-workspace bearer tokens for remote agents.
 
 ## Integrations

@@ -1,3 +1,6 @@
+---
+title: "Platform API (Go Backend)"
+---
 # Platform API (Go Backend)
 
 The Go backend is Molecule AI's control plane. It does not execute agent reasoning itself. It manages the infrastructure and coordination around workspaces.

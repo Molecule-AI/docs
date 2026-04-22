@@ -1,3 +1,6 @@
+---
+title: "Incident Log — molecule-core"
+---
 # Incident Log — molecule-core
 
 > This file documents security incidents, outages, and degraded states.

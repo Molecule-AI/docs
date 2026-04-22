@@ -1,3 +1,6 @@
+---
+title: "Canary release pipeline"
+---
 # Canary release pipeline
 
 How a workspace-server code change reaches the prod tenant fleet — and how to stop it if something's wrong.

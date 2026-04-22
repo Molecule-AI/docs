@@ -1,3 +1,6 @@
+---
+title: "MeDo Smoke Test Log — 2026-04-13 (Run 4)"
+---
 # MeDo Smoke Test Log — 2026-04-13 (Run 4)
 
 **Tester:** PM (direct execution)  

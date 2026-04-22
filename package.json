@@ -1,0 +1,31 @@
+{
+  "name": "molecule-docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Molecule AI documentation site — doc.moleculesai.app",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start",
+    "postinstall": "fumadocs-mdx",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "fumadocs-core": "^16.7.16",
+    "fumadocs-mdx": "^14.3.0",
+    "fumadocs-ui": "^16.7.16",
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.6.3"
+  }
+}

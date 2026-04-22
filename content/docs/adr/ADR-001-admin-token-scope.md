@@ -1,3 +1,6 @@
+---
+title: "ADR-001: Admin endpoints accept any workspace bearer token"
+---
 # ADR-001: Admin endpoints accept any workspace bearer token
 
 **Status:** Accepted — known risk, Phase-H remediation planned

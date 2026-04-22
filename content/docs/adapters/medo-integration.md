@@ -1,3 +1,6 @@
+---
+title: "MeDo Integration Design — Molecule AI Hackathon (May 20 2026)"
+---
 # MeDo Integration Design — Molecule AI Hackathon (May 20 2026)
 
 **Status:** Design — implementation pending operator sign-off on open questions (§5).  

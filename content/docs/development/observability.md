@@ -1,3 +1,6 @@
+---
+title: "Observability (Langfuse)"
+---
 # Observability (Langfuse)
 
 ## Overview

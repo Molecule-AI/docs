@@ -1,3 +1,6 @@
+---
+title: "Team Expansion (Recursive Workspaces)"
+---
 # Team Expansion (Recursive Workspaces)
 
 When a workspace is expanded into a team, it gains sub-workspaces while its own agent remains as the **team lead** (coordinator). This is recursive — sub-workspaces can themselves be expanded into teams, infinitely deep.

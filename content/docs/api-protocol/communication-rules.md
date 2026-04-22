@@ -1,3 +1,6 @@
+---
+title: "Communication Rules"
+---
 # Communication Rules
 
 The hierarchy IS the topology. There is no manual connection wiring — communication is derived automatically from the parent/child structure.

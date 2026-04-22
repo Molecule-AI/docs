@@ -1,3 +1,6 @@
+---
+title: "Hermes Adapter — Shell Design Spec"
+---
 # Hermes Adapter — Shell Design Spec
 
 **Perspective:** DevOps Engineer + Backend Engineer  

@@ -1,3 +1,6 @@
+---
+title: "Workspace Tiers"
+---
 # Workspace Tiers
 
 Four tiers control the security boundary for each workspace. Higher tiers get more system access but less isolation.

@@ -1,0 +1,32 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "changelog",
+    "quickstart",
+    "concepts",
+    "workspace-config",
+    "architecture",
+    "org-template",
+    "plugins",
+    "channels",
+    "schedules",
+    "external-agents",
+    "tokens",
+    "api-reference",
+    "mcp-server",
+    "self-hosting",
+    "self-hosting/admin-token",
+    "observability",
+    "troubleshooting",
+    "---Security---",
+    "security/index",
+    "security/safe-mcp-advisory",
+    "security/owasp-agentic-top-10",
+    "---Runtimes---",
+    "google-adk",
+    "hermes",
+    "---Integrations---",
+    "opencode"
+  ]
+}

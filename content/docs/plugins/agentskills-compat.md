@@ -1,3 +1,6 @@
+---
+title: "Molecule AI plugins and the agentskills.io standard"
+---
 # Molecule AI plugins and the agentskills.io standard
 
 > **TL;DR** — every skill inside a Molecule AI plugin is a spec-compliant

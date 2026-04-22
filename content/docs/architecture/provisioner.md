@@ -1,3 +1,6 @@
+---
+title: "Provisioner"
+---
 # Provisioner
 
 The provisioner is the platform component that deploys workspace containers and VMs. It is triggered when a workspace is created, imported from a bundle, or expanded into a team.

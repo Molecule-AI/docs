@@ -1,3 +1,6 @@
+---
+title: "Partner API Keys — Programmatic Org Management"
+---
 # Partner API Keys — Programmatic Org Management
 
 > **Status:** Planned

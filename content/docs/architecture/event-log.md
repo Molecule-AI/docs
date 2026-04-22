@@ -1,3 +1,6 @@
+---
+title: "Event Log"
+---
 # Event Log
 
 Every structural change appends an immutable row to `structure_events`. The table is **append-only** — rows are never updated or deleted. This is the event sourcing pattern.

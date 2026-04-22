@@ -1,3 +1,6 @@
+---
+title: "Hermes Multi-Provider Dispatch: Native Anthropic, Gemini, and Multi-Turn History"
+---
 # Hermes Multi-Provider Dispatch: Native Anthropic, Gemini, and Multi-Turn History
 
 Hermes is Molecule AI's inference router. Out of the box it proxies every model through an OpenAI-compatible shim. That works for plain text, but the shim does format translation on every round-trip — and it gets the Gemini message format wrong (Gemini expects `role: "model"` and a `parts: [{text}]` wrapper; the shim passes `role: "assistant"` and a flat string). It also flattens multi-turn conversations into a single user blob, losing role attribution across turns.

@@ -1,3 +1,6 @@
+---
+title: "Constraints & Rules"
+---
 # Constraints & Rules
 
 Key design rules and invariants that must be followed throughout the codebase.

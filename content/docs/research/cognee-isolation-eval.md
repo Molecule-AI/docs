@@ -1,3 +1,6 @@
+---
+title: "Cognee Workspace Isolation Evaluation"
+---
 # Cognee Workspace Isolation Evaluation
 
 **Date:** 2026-04-20

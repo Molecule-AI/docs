@@ -1,3 +1,6 @@
+---
+title: "Code Sandbox"
+---
 # Code Sandbox
 
 The code sandbox isolates agent-generated code execution — specifically the `run_code` tool that executes dynamically generated scripts. Not user-submitted code (there is no user code submission in Molecule AI) — the agent's own generated code is what needs sandboxing.

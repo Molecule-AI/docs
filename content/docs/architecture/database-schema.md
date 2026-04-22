@@ -1,3 +1,6 @@
+---
+title: "Database Schema"
+---
 # Database Schema
 
 ## Postgres Tables

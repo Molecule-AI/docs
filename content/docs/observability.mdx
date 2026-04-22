@@ -1,0 +1,180 @@
+---
+title: Observability
+description: Monitor agent activity, LLM traces, and platform health.
+---
+
+## Overview
+
+Molecule AI provides multiple layers of observability -- from real-time WebSocket events on the canvas to structured activity logs, LLM traces, Prometheus metrics, and admin health endpoints.
+
+## Activity Logs
+
+Every significant action in the platform is recorded in the `activity_logs` table. Query logs for a specific workspace:
+
+```
+GET /workspaces/:id/activity
+```
+
+Activity types include:
+
+- **A2A communications** -- request/response capture with duration and method
+- **Task updates** -- agent-reported task status changes
+- **Agent logs** -- structured log entries from workspace runtimes
+- **Errors** -- failures with `error_detail` for debugging
+
+Filter by source to separate user-agent chat (`source=canvas`) from agent-to-agent traffic (`source=agent`).
+
+Activity logs are automatically cleaned up based on `ACTIVITY_RETENTION_DAYS` (default 7). The cleanup job runs every `ACTIVITY_CLEANUP_INTERVAL_HOURS` (default 6).
+
+## LLM Traces
+
+Molecule AI integrates with [Langfuse](https://langfuse.com) for LLM observability. Langfuse runs as part of the infrastructure stack on port 3001, backed by ClickHouse for efficient trace storage.
+
+View traces for a specific workspace:
+
+```
+GET /workspaces/:id/traces
+```
+
+The Langfuse UI at `http://localhost:3001` provides:
+
+- Token usage and cost tracking per workspace
+- Latency breakdowns for LLM calls
+- Prompt/completion pairs for debugging
+- Trace timelines showing multi-step agent reasoning
+
+## Prometheus Metrics
+
+The platform exposes Prometheus-format metrics at:
+
+```
+GET /metrics
+```
+
+This endpoint requires no authentication and is safe to scrape. Metrics are in Prometheus text format (v0.0.4) and include:
+
+- Request counts by method, path, and status code
+- Request latency histograms
+- Active WebSocket connections
+- Workspace status counts
+
+Configure your Prometheus instance to scrape `http://localhost:8080/metrics` at your preferred interval.
+
+## Per-Workspace Token Metrics
+
+Track LLM token consumption per workspace — input tokens, output tokens, and Anthropic prompt-cache reads/writes — aggregated over two rolling windows:
+
+```
+GET /workspaces/:id/metrics
+```
+
+Requires a **workspace bearer token** (`Authorization: Bearer <token>`). Returns:
+
+```json
+{
+  "workspace_id": "uuid",
+  "token_metrics": {
+    "1h": {
+      "input_tokens":       1250,
+      "output_tokens":       430,
+      "cache_read_tokens":   800,
+      "cache_write_tokens":  200
+    },
+    "30d": {
+      "input_tokens":      84200,
+      "output_tokens":     28100,
+      "cache_read_tokens": 52000,
+      "cache_write_tokens": 9400
+    }
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `input_tokens` | Tokens in the prompt sent to the LLM (sum over window) |
+| `output_tokens` | Tokens in the completion returned by the LLM |
+| `cache_read_tokens` | Prompt tokens served from Anthropic's prompt cache |
+| `cache_write_tokens` | Prompt tokens written into Anthropic's prompt cache |
+
+The **canvas WorkspaceUsage panel** (⊞ icon → Usage tab) displays these same metrics live, updating each time the workspace reports a heartbeat.
+
+## Admin Liveness
+
+The liveness endpoint reports the health of every supervised subsystem:
+
+```
+GET /admin/liveness
+```
+
+This endpoint requires `AdminAuth` (bearer token). It returns a `supervised.Snapshot()` for each subsystem with ages -- how long since each subsystem last reported healthy. Use this to debug stuck schedulers, stalled heartbeat goroutines, or unresponsive health sweeps before diving into logs.
+
+## WebSocket Events
+
+The canvas receives real-time updates via WebSocket at `/ws`. Every state change in the platform is broadcast to connected clients:
+
+| Event | Trigger |
+|-------|---------|
+| `WORKSPACE_ONLINE` | Workspace registers successfully |
+| `WORKSPACE_OFFLINE` | Heartbeat TTL expires or health sweep detects dead container |
+| `WORKSPACE_DEGRADED` | Error rate exceeds threshold |
+| `WORKSPACE_RECOVERED` | Error rate drops back to normal |
+| `WORKSPACE_REMOVED` | Workspace deleted |
+| `HEARTBEAT` | Periodic heartbeat from workspace |
+| `A2A_RESPONSE` | Agent-to-agent message received |
+| `AGENT_MESSAGE` | Agent pushes a message to the user |
+
+Events flow through Redis pub/sub to ensure all platform instances broadcast consistently.
+
+## Structure Events
+
+The `structure_events` table is an append-only audit log of every structural change in the platform. Each event is:
+
+1. Inserted into the database via `broadcaster.RecordAndBroadcast()`
+2. Published to Redis pub/sub
+3. Relayed to WebSocket clients
+
+Query events for a specific workspace or globally:
+
+```
+GET /events/:workspaceId    # Workspace-specific
+GET /events                 # All events
+```
+
+Both endpoints require `AdminAuth`.
+
+## Session Search
+
+Search through chat history for a workspace:
+
+```
+GET /workspaces/:id/session-search?q=deployment+error
+```
+
+This searches across both user-agent conversations and agent-to-agent A2A traffic stored in the activity logs.
+
+## Current Task Visibility
+
+Each workspace reports its current task via heartbeat. This is visible in two places:
+
+- **Canvas node** -- the workspace card on the canvas shows the current task text
+- **Heartbeat data** -- `GET /registry/discover/:id` includes `current_task` in the workspace info
+
+When `active_tasks` drops to zero, the current task field clears and the idle loop (if configured) begins its countdown.
+
+## Schedule Run History
+
+For workspaces with cron schedules, inspect past runs:
+
+```
+GET /workspaces/:id/schedules/:scheduleId/history
+```
+
+Each history entry includes:
+
+- Execution timestamp
+- Status (`success`, `failed`, `skipped`)
+- Duration
+- `error_detail` when the run failed (populated by `scheduler.fireSchedule`)
+
+A status of `skipped` means the workspace was busy (active tasks > 0) when the schedule fired and the concurrency-aware scheduler chose not to queue the prompt.

@@ -1,3 +1,6 @@
+---
+title: "Connecting an AI Agent to Lark / Feishu"
+---
 # Connecting an AI Agent to Lark / Feishu
 
 Molecule AI's Lark channel adapter (shipped in #480) lets any workspace agent

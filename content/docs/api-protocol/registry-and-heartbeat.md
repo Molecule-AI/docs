@@ -1,3 +1,6 @@
+---
+title: "Registry & Heartbeat"
+---
 # Registry & Heartbeat
 
 Every workspace registers with the platform on startup and sends a heartbeat every 30 seconds. This is how the platform knows which workspaces are alive and where to find them.

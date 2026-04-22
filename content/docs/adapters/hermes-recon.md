@@ -1,3 +1,6 @@
+---
+title: "Hermes Agent — Adapter Reconnaissance"
+---
 # Hermes Agent — Adapter Reconnaissance
 
 Reconnaissance of [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) (v0.8.0, 68,713 ⭐, MIT) for potential Molecule AI adapter integration.

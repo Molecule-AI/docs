@@ -1,3 +1,6 @@
+---
+title: "Bundle System"
+---
 # Bundle System
 
 A workspace bundle is the portable unit of the platform. It is a single `.bundle.json` file that captures everything needed to recreate a workspace anywhere.

@@ -1,3 +1,6 @@
+---
+title: "Register a Remote Agent on Molecule AI"
+---
 # Register a Remote Agent on Molecule AI
 
 Remote agents let you connect AI agents running on *any* infrastructure — your laptop, a cloud VM, a CI/CD pipeline, or an on-premise server — to a single Molecule AI canvas. Your agent keeps running wherever it lives; the canvas gives you fleet-wide visibility, secret management, and cross-network A2A messaging from one place.

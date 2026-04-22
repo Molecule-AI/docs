@@ -1,3 +1,6 @@
+---
+title: "Wildcard DNS + Cloudflare Worker Proxy"
+---
 # Wildcard DNS + Cloudflare Worker Proxy
 
 > **Status:** Planned — replaces per-tenant DNS record creation.

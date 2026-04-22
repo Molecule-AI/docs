@@ -1,3 +1,6 @@
+---
+title: "Guides"
+---
 # Guides
 
 Step-by-step guides for common Molecule AI integrations and configurations.

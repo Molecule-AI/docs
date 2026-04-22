@@ -1,3 +1,6 @@
+---
+title: "Running a Google ADK Workspace on Molecule AI"
+---
 # Running a Google ADK Workspace on Molecule AI
 
 Google's Agent Development Kit (ADK) is now a first-class runtime on Molecule AI. This tutorial walks you from zero to a running ADK agent workspace — one that persists per-conversation session state and sits alongside your Claude Code and Gemini CLI workers in the same A2A network.

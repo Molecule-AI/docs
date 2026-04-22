@@ -1,3 +1,6 @@
+---
+title: "Plugin install sources"
+---
 # Plugin install sources
 
 > **TL;DR** — plugin **sources** (where a plugin comes from) and plugin

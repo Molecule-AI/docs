@@ -1,3 +1,6 @@
+---
+title: "Config Format (config.yaml)"
+---
 # Config Format (config.yaml)
 
 Each workspace type has a `config.yaml` that defines its personality — the model, skills, tools, and settings.

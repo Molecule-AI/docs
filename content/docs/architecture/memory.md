@@ -1,3 +1,6 @@
+---
+title: "Memory Architecture (HMA)"
+---
 # Memory Architecture (HMA)
 
 Molecule AI's memory model is built around one principle:

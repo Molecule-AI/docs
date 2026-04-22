@@ -1,3 +1,6 @@
+---
+title: "Local Development"
+---
 # Local Development
 
 ## Starting the Stack

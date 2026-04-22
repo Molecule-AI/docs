@@ -1,3 +1,6 @@
+---
+title: "Running a Gemini CLI Workspace on Molecule AI"
+---
 # Running a Gemini CLI Workspace on Molecule AI
 
 Molecule AI now ships a `gemini-cli` runtime adapter alongside the existing `claude-code` adapter. This tutorial walks you from zero to a running Gemini agent workspace in under five minutes.

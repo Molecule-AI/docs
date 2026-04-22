@@ -1,3 +1,6 @@
+---
+title: "SaaS prod migration — 2026-04-19"
+---
 # SaaS prod migration — 2026-04-19
 
 Promoted staging → main on both `Molecule-AI/molecule-controlplane` and `Molecule-AI/molecule-core`. This note captures the prod cutover deltas so ops can cross-check against the running system.

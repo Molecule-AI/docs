@@ -1,3 +1,6 @@
+---
+title: "WebSocket Events"
+---
 # WebSocket Events
 
 The canvas subscribes to the platform's WebSocket at `/ws` and receives real-time structure events as JSON messages.

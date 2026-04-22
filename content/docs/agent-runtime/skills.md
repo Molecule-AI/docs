@@ -1,3 +1,6 @@
+---
+title: "Skills"
+---
 # Skills
 
 A skill is a package that gives an agent knowledge, instructions, and optionally executable tools. Skills are the primary way to customize what a workspace agent can do.

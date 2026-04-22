@@ -1,0 +1,388 @@
+---
+title: Plugins
+description: Extend workspace capabilities with modular plugins — guardrails, skills, workflows.
+---
+
+## Overview
+
+Plugins are installable capability bundles that extend what a workspace can do.
+They range from ambient guardrails that enforce rules automatically, to
+on-demand skills invoked via the `Skill` tool, to workflow plugins that
+compose skills into slash commands.
+
+Plugins follow a **two-axis model**: the *source* (where the plugin comes from)
+is orthogonal to the *shape* (what format it takes). This means you can install
+a plugin from a local registry or from GitHub, and the workspace runtime
+figures out how to load it based on its shape.
+
+---
+
+## Two-Axis Model
+
+### Sources (where)
+
+| Scheme | Description | Example |
+|--------|-------------|---------|
+| `local://` | Platform's curated plugin registry (auto-discovered from the `plugins/` directory) | `local://molecule-careful-bash` |
+| `github://` (pinned) | GitHub repo at a specific tag or commit SHA — **required for all installs** | `github://owner/repo#v1.2.0` |
+| `github://` (SHA) | Pin to an exact immutable commit | `github://owner/repo#abc1234` |
+
+Use `GET /plugins/sources` to list all registered install-source schemes at
+runtime.
+
+### Shapes (what)
+
+| Shape | Description |
+|-------|-------------|
+| agentskills.io format | `SKILL.md` + optional scripts, hooks, and `plugin.yaml` manifest |
+| MCP server | Model Context Protocol server (coming soon for more runtimes) |
+
+The shape is orthogonal to the source. A `github://` plugin and a `local://`
+plugin can both be agentskills.io format. The per-runtime adapter inside the
+workspace handles loading at startup.
+
+---
+
+## Installing a Plugin
+
+```bash
+curl -X POST http://localhost:8080/workspaces/{id}/plugins \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {token}" \
+  -d '{"source": "local://molecule-careful-bash"}'
+```
+
+From GitHub (pinned ref required):
+
+```bash
+curl -X POST http://localhost:8080/workspaces/{id}/plugins \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {token}" \
+  -d '{"source": "github://Molecule-AI/molecule-plugin-careful-bash#v1.0.0"}'
+```
+
+<Callout type="warn">
+  **Pinned refs are required.** `github://owner/repo` without a `#tag` or `#sha` suffix returns **HTTP 422 Unprocessable Entity**. Always pin to a specific tag (e.g. `#v1.0.0`) or commit SHA (e.g. `#abc1234`). See [Supply Chain Security](#supply-chain-security) for details and the escape hatch.
+</Callout>
+
+The platform resolves the source, stages the plugin files, copies them into the
+workspace container at `/configs/plugins/<name>/`, and triggers an automatic
+workspace restart so the runtime picks up the new plugin.
+
+---
+
+## Uninstalling a Plugin
+
+```bash
+curl -X DELETE http://localhost:8080/workspaces/{id}/plugins/{name} \
+  -H "Authorization: Bearer {token}"
+```
+
+Uninstall removes the plugin directory, cleans up copied skill directories and
+rule markers from `CLAUDE.md`, and triggers an automatic workspace restart.
+
+---
+
+## Listing Plugins
+
+### Platform Registry
+
+List all available plugins in the platform registry:
+
+```bash
+# All plugins
+curl http://localhost:8080/plugins
+
+# Filtered by runtime
+curl http://localhost:8080/plugins?runtime=claude-code
+```
+
+Plugins with no declared `runtimes` field in their manifest are treated as
+"unspecified, try it" and included in filtered results.
+
+### Available for a Workspace
+
+Returns plugins filtered to those supported by the workspace's current runtime:
+
+```bash
+curl http://localhost:8080/workspaces/{id}/plugins/available \
+  -H "Authorization: Bearer {token}"
+```
+
+### Installed on a Workspace
+
+```bash
+curl http://localhost:8080/workspaces/{id}/plugins \
+  -H "Authorization: Bearer {token}"
+```
+
+Each installed plugin is annotated with whether it still supports the
+workspace's current runtime. This lets the canvas grey out plugins that went
+inert after a runtime change.
+
+---
+
+## Runtime Compatibility Check
+
+Before changing a workspace's runtime, check which installed plugins would
+become incompatible:
+
+```bash
+curl "http://localhost:8080/workspaces/{id}/plugins/compatibility?runtime=langgraph" \
+  -H "Authorization: Bearer {token}"
+```
+
+Response:
+
+```json
+{
+  "target_runtime": "langgraph",
+  "compatible": [...],
+  "incompatible": [...],
+  "all_compatible": false
+}
+```
+
+The canvas uses this to show a confirmation dialog before applying a runtime
+change.
+
+---
+
+## Built-in Plugins
+
+### Hook Plugins (ambient enforcement)
+
+These fire automatically via the harness layer. No explicit invocation needed.
+
+| Plugin | Purpose |
+|--------|---------|
+| `molecule-careful-bash` | Refuses `git push --force` to main, `rm -rf` at root, `DROP TABLE` against prod schema. Ships the `careful-mode` skill as documentation. |
+| `molecule-freeze-scope` | Locks edits to a single path glob via `.claude/freeze`. Useful while debugging. |
+| `molecule-audit-trail` | Appends every Edit/Write to `.claude/audit.jsonl` for accountability. |
+| `molecule-session-context` | Auto-loads recent cron-learnings and open PR/issue counts at session start. |
+| `molecule-prompt-watchdog` | Injects warning context when the prompt mentions destructive keywords. |
+
+### Skill Plugins (on-demand)
+
+Invoked explicitly via the `Skill` tool during a conversation.
+
+| Plugin | Purpose |
+|--------|---------|
+| `molecule-skill-code-review` | 16-criteria multi-axis code review rubric. |
+| `molecule-skill-cross-vendor-review` | Adversarial second-model review for noteworthy PRs. |
+| `molecule-skill-llm-judge` | Score whether a deliverable addresses the original request. |
+| `molecule-skill-update-docs` | Sync repo docs after merges. |
+| `molecule-skill-cron-learnings` | Defines the operational-memory JSONL format. |
+
+### Workflow Plugins (slash commands)
+
+Compose skills into repeatable multi-step workflows.
+
+| Plugin | Command | Purpose |
+|--------|---------|---------|
+| `molecule-workflow-triage` | `/triage` | Full PR-triage cycle (gates 1-7 + code-review + merge if green). |
+| `molecule-workflow-retro` | `/retro` | Weekly retrospective issue. |
+
+### Shared Plugins
+
+Loaded by default from the `plugins/` directory at the repo root.
+
+| Plugin | Purpose |
+|--------|---------|
+| `molecule-dev` | Codebase conventions (rules injected into CLAUDE.md) + `review-loop` skill. |
+| `superpowers` | `verification-before-completion`, `test-driven-development`, `systematic-debugging`, `writing-plans`. |
+| `ecc` | General Claude Code guardrails. |
+| `browser-automation` | Puppeteer/CDP-based web scraping and live canvas screenshots. Opt-in per workspace. |
+
+### Platform Opt-in Plugins
+
+Available in the platform registry (`local://`) but not installed by default.
+Add them per workspace or as org defaults as needed.
+
+| Plugin | Tools | Requires | Purpose |
+|--------|-------|----------|---------|
+| `molecule-medo` | `create_medo_app`, `update_medo_app`, `publish_medo_app` | `MEDO_API_KEY` secret | Baidu MeDo app builder integration — create, update, and publish MeDo mini-apps from within an agent. |
+
+#### Installing molecule-medo
+
+```bash
+# 1. Set your API key
+curl -X POST http://localhost:8080/workspaces/{id}/secrets \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{"key": "MEDO_API_KEY", "value": "your-medo-api-key"}'
+
+# 2. Install the plugin (triggers auto-restart)
+curl -X POST http://localhost:8080/workspaces/{id}/plugins \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{"source": "local://molecule-medo"}'
+```
+
+Or add it to `org.yaml`:
+
+```yaml
+workspaces:
+  - name: App Builder
+    plugins: [molecule-medo]
+    secrets:
+      MEDO_API_KEY: "${MEDO_API_KEY}"
+```
+
+---
+
+## Org Template Plugin Resolution
+
+When deploying an org template, per-workspace `plugins:` lists in `org.yaml`
+role overrides **UNION** with `defaults.plugins` (deduplicated, defaults first).
+They do not replace them.
+
+To opt a specific default out for a given role or workspace, prefix the plugin
+name with `!` or `-`:
+
+```yaml
+defaults:
+  plugins:
+    - molecule-careful-bash
+    - molecule-audit-trail
+    - superpowers
+
+workspaces:
+  researcher:
+    role: "Research Analyst"
+    plugins:
+      - browser-automation       # added on top of defaults
+      - "!superpowers"           # opted out of superpowers
+```
+
+Result for the `researcher` workspace:
+`molecule-careful-bash`, `molecule-audit-trail`, `browser-automation`
+
+---
+
+## Install Safeguards
+
+Environment variables that bound the cost and security of a single plugin install:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PLUGIN_INSTALL_BODY_MAX_BYTES` | `65536` (64 KiB) | Max request body size |
+| `PLUGIN_INSTALL_FETCH_TIMEOUT` | `5m` | Whole fetch + copy deadline |
+| `PLUGIN_INSTALL_MAX_DIR_BYTES` | `104857600` (100 MiB) | Max staged-tree size |
+| `PLUGIN_ALLOW_UNPINNED` | _(unset)_ | Set to `true` to allow bare `github://owner/repo` refs without a tag or SHA. **Development use only — never set in production.** |
+
+These prevent a slow or malicious source from tying up a handler goroutine or
+exhausting disk space.
+
+---
+
+## Supply Chain Security
+
+The platform enforces two controls to protect against compromised or tampered plugin sources (SAFE-T1102):
+
+### 1. Pinned refs (enforced)
+
+All `github://` installs must include a `#tag` or `#sha` suffix. This ensures the code you audit is exactly what gets installed — a push to the same branch cannot silently swap in different code between your review and a workspace restart.
+
+```
+✅  github://Molecule-AI/my-plugin#v1.2.3       (semver tag)
+✅  github://Molecule-AI/my-plugin#abc1234def   (commit SHA)
+❌  github://Molecule-AI/my-plugin              (→ HTTP 422)
+```
+
+To bypass during local development, set `PLUGIN_ALLOW_UNPINNED=true` in your platform environment. **Do not set this in production.**
+
+### 2. SHA-256 content integrity (optional)
+
+When installing from GitHub, you can provide an expected SHA-256 hash of the staged plugin tree. The platform verifies the hash before completing the install — a mismatch aborts with HTTP 422 and cleans up the staging directory.
+
+```bash
+curl -X POST http://localhost:8080/workspaces/{id}/plugins \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {token}" \
+  -d '{
+    "source": "github://Molecule-AI/my-plugin#v1.2.3",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }'
+```
+
+**How the hash is computed:** Walk all non-manifest files in the staged plugin tree, sort by relative path, concatenate as `<rel-path>\x00<content>`, and compute `sha256.Sum256`. The hash is lowercase hex.
+
+You can pre-compute the expected hash from a clean checkout:
+```bash
+# In a clean clone of the plugin repo at the target ref:
+find . -type f ! -name 'manifest.json' | sort | \
+  xargs -I{} sh -c 'printf "%s\x00" "{}" && cat "{}"' | sha256sum
+```
+
+---
+
+## Plugin Download (External Workspaces)
+
+External workspaces (those running outside Docker) can pull plugins as gzipped
+tarballs:
+
+```bash
+curl http://localhost:8080/workspaces/{id}/plugins/{name}/download \
+  -H "Authorization: Bearer {token}" \
+  -o plugin.tar.gz
+```
+
+An optional `?source=github://owner/repo` query parameter lets external
+workspaces pull from upstream repos without the platform pre-staging them.
+Defaults to `local://<name>` when omitted.
+
+---
+
+## Org-Level Plugin Governance
+
+Tenant admins can restrict which plugins workspaces in their org are permitted to load using a per-org allowlist. When an allowlist is configured, workspaces can only install plugins explicitly listed — all other installs are blocked at load time.
+
+### Managing the allowlist
+
+```bash
+# Allow a plugin in the org
+curl -X POST http://localhost:8080/admin/orgs/{orgId}/plugins/allowlist \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"plugin_name": "molecule-audit-trail"}'
+
+# Remove a plugin from the allowlist
+curl -X DELETE http://localhost:8080/admin/orgs/{orgId}/plugins/allowlist/molecule-audit-trail \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+Both endpoints require `AdminAuth`. `orgId` is the org's UUID (set via `MOLECULE_ORG_ID` for SaaS tenants; in self-hosted single-org mode this is the org record created at first startup).
+
+### Behaviour when an allowlist is configured
+
+| Scenario | Result |
+|----------|--------|
+| No allowlist entries for the org | All plugins are permitted (default; backward-compatible) |
+| Allowlist has at least one entry | Only listed plugins may be installed; others return `403 Forbidden` |
+| Plugin already installed when allowlist was created | Pre-existing installs are not removed, but the plugin cannot be re-installed if later uninstalled |
+
+### Relationship to supply-chain pinning
+
+The governance allowlist and supply-chain pinning (`PLUGIN_ALLOW_UNPINNED`) are independent:
+- The **allowlist** controls *which* plugins workspaces can load.
+- **Pinning** controls *how* plugins must be referenced (exact commit/tag, never `latest`).
+
+Both can be active simultaneously — the most restrictive rule wins.
+
+---
+
+## API Reference
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/plugins` | List plugin registry (supports `?runtime=` filter) |
+| GET | `/plugins/sources` | List registered install-source schemes |
+| GET | `/workspaces/:id/plugins` | List installed plugins |
+| POST | `/workspaces/:id/plugins` | Install a plugin (`{"source": "scheme://spec"}`) |
+| DELETE | `/workspaces/:id/plugins/:name` | Uninstall a plugin |
+| GET | `/workspaces/:id/plugins/available` | Available plugins filtered by workspace runtime |
+| GET | `/workspaces/:id/plugins/compatibility?runtime=X` | Preflight runtime-change compatibility check |
+| GET | `/workspaces/:id/plugins/:name/download` | Download plugin as tarball (external workspaces) |
+| POST | `/admin/orgs/:orgId/plugins/allowlist` | Add a plugin to the org allowlist (AdminAuth) |
+| DELETE | `/admin/orgs/:orgId/plugins/allowlist/:name` | Remove a plugin from the org allowlist (AdminAuth) |

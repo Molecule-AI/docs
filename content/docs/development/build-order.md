@@ -1,3 +1,6 @@
+---
+title: "Build Order"
+---
 # Build Order
 
 The core loop to prove first: **workspace registers -> canvas shows it -> heartbeat keeps it alive -> workspace goes offline -> canvas shows it gray.**

@@ -1,3 +1,6 @@
+---
+title: "Canvas UI (Next.js Frontend)"
+---
 # Canvas UI (Next.js Frontend)
 
 The canvas is Molecule AI's operational UI. It is not just a graph viewer. It is the place where teams deploy workspaces, inspect live state, configure runtimes, browse files, watch activity, and chat with agents.

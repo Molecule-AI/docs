@@ -1,3 +1,6 @@
+---
+title: "Cognee Architecture Deep-Dive — Workspace Isolation"
+---
 # Cognee Architecture Deep-Dive — Workspace Isolation
 
 **Date:** 2026-04-20

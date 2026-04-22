@@ -1,3 +1,6 @@
+---
+title: "Molecule AI — Comprehensive Technical Documentation"
+---
 # Molecule AI — Comprehensive Technical Documentation
 
 > Definitive technical reference for the Molecule AI Agent Team platform.

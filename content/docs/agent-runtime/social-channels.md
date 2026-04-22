@@ -1,3 +1,6 @@
+---
+title: "Social Channels"
+---
 # Social Channels
 
 Connect AI agent workspaces to social platforms (Telegram, Slack, Discord) so users can talk to agents from anywhere. Built on a pluggable adapter pattern — one channel per workspace, multiple chats per channel.

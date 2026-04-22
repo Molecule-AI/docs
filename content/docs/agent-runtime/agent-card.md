@@ -1,3 +1,6 @@
+---
+title: "Agent Card"
+---
 # Agent Card
 
 Every workspace publishes an Agent Card at `/.well-known/agent-card.json`. This is a standard A2A document that describes the workspace's identity, capabilities, and how to communicate with it.

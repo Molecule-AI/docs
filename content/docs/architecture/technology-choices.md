@@ -1,3 +1,6 @@
+---
+title: "Technology Choices"
+---
 # Technology Choices
 
 This document explains why each technology was chosen for Molecule AI.

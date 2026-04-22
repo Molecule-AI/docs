@@ -1,3 +1,6 @@
+---
+title: "A2A Protocol (Inter-Workspace Communication)"
+---
 # A2A Protocol (Inter-Workspace Communication)
 
 Workspaces talk to each other **directly** via A2A (Agent-to-Agent protocol) — the platform is not in the message path.

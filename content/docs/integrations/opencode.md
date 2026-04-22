@@ -1,3 +1,6 @@
+---
+title: "Molecule AI + opencode Integration"
+---
 # Molecule AI + opencode Integration
 
 > **opencode** is an AI coding agent ([opencode.ai](https://opencode.ai)) that supports remote MCP servers via `opencode.json`. This guide shows how to wire it to your Molecule AI workspace.

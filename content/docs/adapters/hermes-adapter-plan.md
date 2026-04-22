@@ -1,3 +1,6 @@
+---
+title: "Hermes Adapter — Implementation Plan"
+---
 # Hermes Adapter — Implementation Plan
 
 **Author:** Dev Lead  

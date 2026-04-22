@@ -1,3 +1,6 @@
+---
+title: "Architecture Overview"
+---
 # Architecture Overview
 
 Molecule AI is a platform for orchestrating AI agent workspaces that form an organizational hierarchy. Workspaces register with a central platform, communicate via A2A protocol, and are visualized on a drag-and-drop canvas.

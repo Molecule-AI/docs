@@ -1,3 +1,6 @@
+---
+title: "Staging Environment Design"
+---
 # Staging Environment Design
 
 > **Status:** Planned — gates all future infra changes (Tunnel migration,

@@ -1,3 +1,6 @@
+---
+title: "System Prompt Structure"
+---
 # System Prompt Structure
 
 When a workspace agent starts (or rebuilds its prompt), the system prompt is assembled in a specific order: **specific to general** — the agent's own identity first, then what it can do, then what it can delegate.

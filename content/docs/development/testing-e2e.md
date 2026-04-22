@@ -1,3 +1,6 @@
+---
+title: "E2E Testing"
+---
 # E2E Testing
 
 End-to-end test scripts live under `tests/e2e/` and exercise the platform against a real Postgres + Redis. Every script is shellcheck-clean and shares helpers from `tests/e2e/_lib.sh` + `tests/e2e/_extract_token.py`.

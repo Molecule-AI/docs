@@ -1,3 +1,6 @@
+---
+title: "Tenant Image Upgrade Strategies"
+---
 # Tenant Image Upgrade Strategies
 
 > **Status:** Option B (sidecar auto-updater) implemented. Options A and C

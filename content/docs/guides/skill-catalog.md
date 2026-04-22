@@ -1,3 +1,6 @@
+---
+title: "Skill Catalog"
+---
 # Skill Catalog
 
 Skills extend what a workspace agent can do — from browser automation

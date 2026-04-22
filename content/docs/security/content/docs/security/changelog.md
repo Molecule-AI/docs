@@ -9,6 +9,46 @@ This page documents security fixes shipped in the Molecule AI platform. Each ent
 
 ---
 
+## 2026-04-21 — CWE-78: Scope Refinement in `deleteViaEphemeral`
+
+**Severity:** High (CWE-78)
+**PRs:** [#1310](https://github.com/Molecule-AI/molecule-core/pull/1310) (original fix), [#1328](https://github.com/Molecule-AI/molecule-core/pull/1328) (scope refinement)
+**Affected:** `workspace-server/internal/handlers/container_files.go` — `TemplatesHandler.deleteViaEphemeral`
+
+### Vulnerability
+
+The exec-form refactor (PR #1310) replaced shell string interpolation with `exec.Command("rm", "-rf", "/configs", filePath)`. However, `rm -rf` treats each argument as an independent deletion target, not a combined scope. Both `/configs` and `filePath` are deleted as separate top-level directories — unintended volume-wide deletion, not malicious caller behavior.
+
+### Fix
+
+Commit `f3ec07a` fixes the regression by passing only the single target path to `rm`: `exec.Command("rm", "-rf", filePath)`. The user-supplied `filePath` argument is validated by the existing `validateRelPath` guard before reaching this call.
+
+### User-facing summary
+
+Workspace file deletion operations now use safe argument-passing with no user-supplied scope. Attempts to manipulate the delete scope are rejected at the handler entry point.
+
+---
+
+## 2026-04-21 — F1085: Credential Scrub Before Workspace Memory Seeding
+
+**Severity:** High (credential exposure)
+**PRs:** [#1203](https://github.com/Molecule-AI/molecule-core/pull/1203), [#1206](https://github.com/Molecule-AI/molecule-core/pull/1206)
+**Affected:** `workspace-server/internal/handlers/workspace_provision.go` — `seedInitialMemories`
+
+### Vulnerability
+
+`seedInitialMemories()` was inserting template and configuration memories directly into the workspace's `agent_memories` table without scrubbing credential-like patterns. A workspace provisioned from a template containing API keys, bearer tokens, or other secrets would store those secrets in plain text, accessible to any agent prompt or memory retrieval within that workspace.
+
+### Fix
+
+`redactSecrets(workspaceID, content)` is now called on the truncated memory content before the `agent_memories` INSERT. The redaction strips patterns matching common credential formats (AWS access key IDs, bearer tokens, generic API keys) before storage. The same `redactSecrets` function is used consistently across the plugin install pipeline and workspace provision paths.
+
+### User-facing summary
+
+Workspace memories seeded from templates no longer store credential-like values in plain text. API keys, bearer tokens, and other secrets are scrubbed from provisioned workspace memories before insertion.
+
+---
+
 ## 2026-04-20 — CWE-22: Path Traversal in `copyFilesToContainer`
 
 **Severity:** High (CWE-22)

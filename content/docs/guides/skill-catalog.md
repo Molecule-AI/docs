@@ -73,7 +73,7 @@ skills:
   - name: browser-automation
     source: builtin
   - name: browser-testing
-    source: plugin:molecule-ai-plugin-browser-automation
+    source: plugin
   - name: tts
     source: builtin
     config:
@@ -85,26 +85,16 @@ skills:
 On workspace boot, the runtime validates each skill and loads the
 `SKILL.md` + tools into the agent's context.
 
-### Installing browser-testing (Playwright)
+### browser-testing (Playwright)
 
-`browser-testing` is part of the `molecule-ai-plugin-browser-automation` plugin alongside `browser-automation`. Both skills ship in the same plugin package:
-
-```bash
-# Install both browser-automation and browser-testing
-molecule skills install browser-automation
-
-# Install only browser-testing (if browser-automation is already present)
-molecule skills install browser-testing --from plugin:molecule-ai-plugin-browser-automation
-```
-
-Or via `config.yaml`:
+`browser-testing` is auto-discovered when `molecule-ai-plugin-browser-automation` is installed — no additional install flags required. Declare it in `config.yaml` alongside `browser-automation` to include it explicitly:
 
 ```yaml
 skills:
   - name: browser-automation
     source: builtin
   - name: browser-testing
-    source: plugin:molecule-ai-plugin-browser-automation
+    source: plugin
 ```
 
 > **Note:** `browser-testing` requires Playwright system dependencies (`libglib2.0-0`, `libnss3`, etc.) to be pre-installed in the container image. See the skill's `SKILL.md` for the full `apt-get` command.

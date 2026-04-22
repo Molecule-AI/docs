@@ -17,7 +17,8 @@ and more:
 
 | Category | Skill | What it does | Provider options |
 |----------|-------|-------------|-----------------|
-| **Browser** | `browser-automation` | Chrome DevTools Protocol via MCP — navigate, query DOM, screenshot, fill forms. Same engine as Hermes' built-in browser tool. | Built-in (CDP); swap via skill version |
+| **Browser** | `browser-automation` | Chrome DevTools Protocol via MCP — navigate, query DOM, screenshot, fill forms. For external sites and social platforms. | Built-in (CDP); swap via skill version |
+| **Browser** | `browser-testing` | Playwright headless Chromium — click, drag, type, screenshot, viewport testing. For testing your own canvas and web apps. | Plugin (`molecule-ai-plugin-browser-automation`) |
 | **TTS** | `tts` | Text-to-speech generation. Streams audio to output. | OpenAI, ElevenLabs, or self-hosted |
 | **Image gen** | `image-generation` | Generates images from text prompts. | OpenAI DALL·E, Stability AI, or self-hosted |
 | **Web search** | `web-search` | Structured web search with result parsing. | Brave, SerpAPI, or custom |
@@ -71,6 +72,8 @@ Skills can also be declared in the workspace config file:
 skills:
   - name: browser-automation
     source: builtin
+  - name: browser-testing
+    source: plugin
   - name: tts
     source: builtin
     config:
@@ -81,6 +84,20 @@ skills:
 
 On workspace boot, the runtime validates each skill and loads the
 `SKILL.md` + tools into the agent's context.
+
+### browser-testing (Playwright)
+
+`browser-testing` is auto-discovered when `molecule-ai-plugin-browser-automation` is installed — no additional install flags required. Declare it in `config.yaml` alongside `browser-automation` to include it explicitly:
+
+```yaml
+skills:
+  - name: browser-automation
+    source: builtin
+  - name: browser-testing
+    source: plugin
+```
+
+> **Note:** `browser-testing` requires Playwright system dependencies (`libglib2.0-0`, `libnss3`, etc.) to be pre-installed in the container image. See the skill's `SKILL.md` for the full `apt-get` command.
 
 ## Version Management
 

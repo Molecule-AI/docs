@@ -53,6 +53,32 @@ list_workspaces
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MOLECULE_URL` | `http://localhost:8080` | Platform API URL |
+| `LOG_LEVEL` | `info` | Log level — `trace`, `debug`, `info`, `warn`, `error`, `fatal` (pino numeric levels: 10–60) |
+
+## Structured Logging
+
+The MCP server emits structured JSON logs via [pino](https://github.com/pinojs/pino). Each log entry includes `level`, `time`, `pid`, `hostname`, `msg`, and any extra fields passed as context.
+
+When `NODE_ENV != "production"`, logs are pretty-printed for human readability. In production the output is machine-parseable JSON.
+
+Every log entry automatically includes MCP request context (tool name, request ID, workspace ID) when called from within a tool handler:
+
+```json
+{
+  "level": 30,
+  "time": "2026-04-22T18:30:00.000Z",
+  "pid": 1234,
+  "hostname": "workspace-server",
+  "msg": "rate limit hit",
+  "tool": "list_workspaces",
+  "requestId": "req_abc123",
+  "workspaceId": "ws_xyz789"
+}
+```
+
+Set `LOG_LEVEL=debug` (level 20) to trace all tool calls and request IDs. Set `LOG_LEVEL=error` (level 50) in CI to suppress informational output.
+
+See [`molecule-mcp-server` PR #6](https://github.com/Molecule-AI/molecule-mcp-server/pull/6) for implementation details.
 
 ## Tool Reference
 
@@ -248,3 +274,4 @@ The MCP server handles auth automatically when configured with the correct `MOLE
 | "401 Unauthorized" | Token expired or revoked — create a new one |
 | Tools not showing | Run `npx @molecule-ai/mcp-server` standalone to check for errors |
 | Stale data | MCP server doesn't cache — check platform directly |
+| High-volume log output | Set `LOG_LEVEL=error` to suppress info/warn; in production, log output is JSON (machine-parseable) |

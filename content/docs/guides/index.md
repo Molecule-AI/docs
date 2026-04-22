@@ -9,6 +9,10 @@ Step-by-step guides for common Molecule AI integrations and configurations.
 
 - [Quickstart](/docs/quickstart) — Deploy your first AI agent in under 5 minutes.
 
+## CLI Tooling
+
+- [molecli Shell Completion](/docs/guides/molecli-shell-completion) — Enable tab completion for the `molecule` CLI (`molecli`) TUI dashboard in bash, zsh, fish, and PowerShell.
+
 ## Remote Agents
 
 - [External Agent Registration](/docs/guides/external-agent-registration) — Register agents running outside the platform Docker network (on laptops, cloud VMs, edge devices) as first-class workspaces with per-workspace bearer tokens.

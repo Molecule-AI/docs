@@ -7,6 +7,70 @@ All notable changes to the Molecule AI platform are documented here.
 Entries are published daily at 23:50 UTC.
 
 ---
+## 2026-04-22
+
+### ✨ New features
+
+#### Workspace model propagation — hermes MiniMax flow
+Customer selects `model=minimax/MiniMax-M2.7-highspeed` in Canvas → the model and
+API key now propagate correctly into the runtime environment instead of being dropped
+on the floor at provisioning time. Works for hermes workspaces in both hosted SaaS
+and self-hosted EC2 deployments.
+(`molecule-core` [#1685](https://github.com/Molecule-AI/molecule-core/pull/1685))
+
+#### EC2 Instance Connect Endpoint — one-click shell from Canvas
+Canvas Terminal tab now uses AWS EC2 Instance Connect Endpoint to open a PTY inside
+any workspace EC2 instance — no SSH keys to manage, no IP to copy, no security group
+rules to configure. IAM policy gates access, STS pushes a short-lived key that
+auto-expires, and every tunnel open is recorded in CloudTrail.
+See the [EC2 Instance Connect guide](/docs/infra/workspace-terminal).
+(`molecule-core` [#1554](https://github.com/Molecule-AI/molecule-core/pull/1554))
+
+#### Phase 33 — Cloudflare Tunnel replaced with direct-connect public IPs
+Cloud-hosted workspaces no longer route through `cloudflared`. Each workspace gets
+its own public IP from the VPC subnet and connects directly to the platform over
+TLS on port 443. Reduces latency by ~20–40 ms (region-dependent), removes the
+Cloudflare egress cost dependency, and enables direct `curl` debugging without
+the tunnel path.
+See the [migration blog post](/blog/cloudflare-tunnel-migration).
+(`molecule-core` [#1612](https://github.com/Molecule-AI/molecule-core/pull/1612))
+
+### 🔒 Security
+
+- **F1085 deleteViaEphemeral**: `rm` scope restricted to `/configs` volume only —
+  prevents deletion of application code or workspace files if the exec form is
+  exploited. Applied to both `main` and `staging`. (`molecule-core` [#1682](https://github.com/Molecule-AI/molecule-core/pull/1682), [#1616](https://github.com/Molecule-AI/molecule-core/pull/1616))
+
+### 🔧 Fixes
+
+- Canvas now fetches the runtime and model dropdown from the `/templates` registry
+  at load time — runtime list stays current without code deploys. (`molecule-core` [#1666](https://github.com/Molecule-AI/molecule-core/pull/1666))
+- Canvas accessibility: `aria-hidden` correctly applied to decorative SVGs;
+  `MissingKeysModal` now uses correct dialog semantics and manages focus. (`molecule-core` [#1594](https://github.com/Molecule-AI/molecule-core/pull/1594))
+- Provisioner pulls workspace template images from GHCR instead of Docker Hub
+  for faster cold starts and reduced third-party dependency. (`molecule-core` [#1624](https://github.com/Molecule-AI/molecule-core/pull/1624))
+- Shared runtime heartbeat no longer leaves workspaces in a phantom-busy state after
+  task completion. (`molecule-ai-workspace-runtime` [#37](https://github.com/Molecule-AI/molecule-ai-workspace-runtime/pull/37))
+
+### 📚 Docs
+
+- **MCP server structured logging**: `LOG_LEVEL` env var (`trace`/`debug`/`info`/`warn`/`error`/`fatal`),
+  pino JSON output in production, pretty-print in development, AsyncLocalStorage
+  context on every log entry (tool name, request ID, workspace ID). (`docs` [#78](https://github.com/Molecule-AI/docs/pull/78))
+- **molecli shell completion**: tab completion for `molecule` CLI in bash, zsh, fish,
+  and PowerShell — covers all subcommands and flags. (`docs` [#79](https://github.com/Molecule-AI/docs/pull/79))
+
+### 🧹 Internal
+
+- 34 internal changes across `molecule-core`, `molecule-ci`, and template repos:
+  CI workflow migration to `ubuntu-latest`, security patch backports (CWE-22/CWE-78),
+  Go build fixes, canvas Dockerfile GID fix, Go linter upgrades, duplicate-symbol
+  resolution, and reusable `publish-template-image` workflow for all workspace template
+  repos. (`molecule-core`, `molecule-ci`)
+
+---
+
+
 
 ## 2026-04-17
 

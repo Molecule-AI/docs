@@ -295,7 +295,7 @@ Workspace file management. Files are stored in the workspace's config directory.
 |--------|------|------|-------------|
 | GET | `/workspaces/:id/files` | WorkspaceAuth | List files in the workspace config directory. |
 | GET | `/workspaces/:id/files/*path` | WorkspaceAuth | Read a specific file. |
-| PUT | `/workspaces/:id/files/*path` | WorkspaceAuth | Write a file. Creates parent directories as needed. |
+| PUT | `/workspaces/:id/files/*path` | WorkspaceAuth | Write a file. Creates parent directories as needed. On SaaS workspaces (EC2, no Docker), routes via EC2 Instance Connect endpoint using an ephemeral SSH key pair — the key is scoped to the file-write operation and deleted within 30 seconds. Max payload ~10 MiB. Self-hosted Docker workspaces write via `docker cp` as before. |
 | DELETE | `/workspaces/:id/files/*path` | WorkspaceAuth | Delete a file. |
 | GET | `/workspaces/:id/shared-context` | WorkspaceAuth | Get the shared context files for a workspace (aggregated from parent hierarchy). |
 

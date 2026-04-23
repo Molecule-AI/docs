@@ -9,11 +9,15 @@ Entries are published daily at 23:50 UTC.
 ---
 ## 2026-04-23
 
-A quiet day — most activity was internal tooling and security hardening. The SSRF fix below resolves a regression that blocked chat for SaaS deployments.
+### ✨ New features
+
+- **SaaS Federation v2 tutorial**: a clean, self-contained walkthrough for platform operators who want to run multi-tenant workspaces from a single control plane. Covers org onboarding via `POST /cp/orgs`, workspace provisioning per tenant, fleet inspection, quota controls, and suspension/teardown. (`molecule-core` [#1700](https://github.com/Molecule-AI/molecule-core/pull/1700))
+- **External workspace quickstart**: a 5-minute guide to running any HTTP-speaking agent (Python, Node, Go, Rust) on your own machine and having it appear on the canvas alongside platform-provisioned agents. Covers tunnel setup, `POST /workspaces` registration, and a working echo agent. (`molecule-core` [#1760](https://github.com/Molecule-AI/molecule-core/pull/1760))
 
 ### 🔧 Fixes
 
 - **SSRF guard in SaaS mode**: previously the SSRF protection was blocking all RFC-1918 private IP ranges (`10/8`, `172.16/12`, `192.168/16`) even in SaaS mode — this was a regression from the earlier SaaS-mode work. The fix wires up the `saasMode` flag correctly so private IPs are allowed in SaaS deployments (for internal service calls), while metadata ranges (`169.254/16`), CGNAT, loopback, and link-local remain blocked in every mode. IPv6 ULA (`fd00::/8`) handling is also now correct. (`molecule-core` [#1692](https://github.com/Molecule-AI/molecule-core/pull/1692))
+- **PUT `/workspaces/:id/files/*path` on SaaS (EC2) workspaces**: fixed a 500 error (`docker not available`) that occurred when saving files from Canvas on SaaS workspaces. The handler now detects non-Docker workspaces via `workspaces.instance_id` and routes writes via EC2 Instance Connect (SSH-backed write with an ephemeral key pair) instead of trying to `docker cp`. (`molecule-core` [#1702](https://github.com/Molecule-AI/molecule-core/pull/1702))
 
 ### 📚 Docs
 
@@ -22,6 +26,7 @@ A quiet day — most activity was internal tooling and security hardening. The S
 
 ### 🧹 Internal
 
+- SaaS Federation v2 tutorial published — clean rewrite of #1613, now with correct HTTP status codes, fleet metrics endpoint, and security model table (`molecule-core` [#1700](https://github.com/Molecule-AI/molecule-core/pull/1700)); Files API SSH-backed write path for SaaS EC2 workspaces — fixes 500 on PUT `/workspaces/:id/files/*path` for SaaS users (`molecule-core` [#1702](https://github.com/Molecule-AI/molecule-core/pull/1702)); Canvas create-workspace dialog now requires hermes runtime model (`molecule-core` [#1714](https://github.com/Molecule-AI/molecule-core/pull/1714)).
 - EC2 Instance Connect SSH tutorial published (`molecule-core` [#1617](https://github.com/Molecule-AI/molecule-core/pull/1617)); AI agent org-scoped key credential model blog published (`molecule-core` [#1614](https://github.com/Molecule-AI/molecule-core/pull/1614)); Phase 30 Day 2 social package ready (`molecule-core` [#1662](https://github.com/Molecule-AI/molecule-core/pull/1662)).
 
 ---

@@ -7,6 +7,26 @@ All notable changes to the Molecule AI platform are documented here.
 Entries are published daily at 23:50 UTC.
 
 ---
+## 2026-04-23
+
+A quiet day — most activity was internal tooling and security hardening. The SSRF fix below resolves a regression that blocked chat for SaaS deployments.
+
+### 🔧 Fixes
+
+- **SSRF guard in SaaS mode**: previously the SSRF protection was blocking all RFC-1918 private IP ranges (`10/8`, `172.16/12`, `192.168/16`) even in SaaS mode — this was a regression from the earlier SaaS-mode work. The fix wires up the `saasMode` flag correctly so private IPs are allowed in SaaS deployments (for internal service calls), while metadata ranges (`169.254/16`), CGNAT, loopback, and link-local remain blocked in every mode. IPv6 ULA (`fd00::/8`) handling is also now correct. (`molecule-core` [#1692](https://github.com/Molecule-AI/molecule-core/pull/1692))
+
+### 📚 Docs
+
+- **molecli shell completion**: tab completion for `molecule` CLI in bash, zsh, fish, and PowerShell — covers all subcommands and flags. (`docs` [#79](https://github.com/Molecule-AI/docs/pull/79))
+- **MCP server structured logging**: `LOG_LEVEL` env var, pino JSON output with AsyncLocalStorage context on every tool call. (`docs` [#78](https://github.com/Molecule-AI/docs/pull/78))
+
+### 🧹 Internal
+
+- EC2 Instance Connect SSH tutorial published (`molecule-core` [#1617](https://github.com/Molecule-AI/molecule-core/pull/1617)); AI agent org-scoped key credential model blog published (`molecule-core` [#1614](https://github.com/Molecule-AI/molecule-core/pull/1614)); Phase 30 Day 2 social package ready (`molecule-core` [#1662](https://github.com/Molecule-AI/molecule-core/pull/1662)).
+
+---
+
+
 ## 2026-04-22
 
 ### ✨ New features

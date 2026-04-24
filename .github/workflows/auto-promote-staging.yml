@@ -31,7 +31,9 @@ permissions:
 
 jobs:
   promote:
-    runs-on: ubuntu-latest
+    # self-hosted Mac mini — org's GitHub-hosted minute budget is exhausted
+    # for private repos; same runner used by ci.yml
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
         with:

@@ -16,7 +16,7 @@ Each A2A response from a workspace includes a `metadata.tool_trace` array. The p
 
 ```json
 {
-  "id": "log-abc123",
+  "run_id": "log-abc123",
   "activity_type": "a2a_call",
   "workspace_id": "ws_01hx3k...",
   "method": "message/send",
@@ -38,6 +38,20 @@ Each A2A response from a workspace includes a `metadata.tool_trace` array. The p
 ```
 
 ### Field definitions
+
+Activity log fields (the outer object that wraps a tool trace):
+
+| Field | Description |
+|---|---|
+| `run_id` | Unique identifier for this activity log row. Links the `tool_trace` to its originating A2A run — use this to correlate traces from fan-out tasks across multiple workspace logs. |
+| `activity_type` | The type of logged event (e.g., `a2a_call`, `a2a_receive`, `task_update`) |
+| `workspace_id` | The workspace that generated this log entry |
+| `method` | The A2A method invoked (e.g., `message/send`) |
+| `created_at` | ISO 8601 timestamp when the entry was written |
+| `duration_ms` | Total elapsed time of the call in milliseconds |
+| `tool_trace` | Array of tool call objects (see below) |
+
+Tool trace object fields (each entry in the `tool_trace` array):
 
 | Field | Description |
 |---|---|

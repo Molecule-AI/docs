@@ -9,11 +9,15 @@ Entries are published daily at 23:50 UTC.
 ---
 ## 2026-04-23
 
-A quiet day — most activity was internal tooling and security hardening. The SSRF fix below resolves a regression that blocked chat for SaaS deployments.
+### ✨ New features
+
+- **SaaS Federation v2 tutorial**: a clean, self-contained walkthrough for platform operators who want to run multi-tenant workspaces from a single control plane. Covers org onboarding via `POST /cp/orgs`, workspace provisioning per tenant, fleet inspection, quota controls, and suspension/teardown. (`molecule-core` [#1700](https://github.com/Molecule-AI/molecule-core/pull/1700))
+- **External workspace quickstart**: a 5-minute guide to running any HTTP-speaking agent (Python, Node, Go, Rust) on your own machine and having it appear on the canvas alongside platform-provisioned agents. Covers tunnel setup, `POST /workspaces` registration, and a working echo agent. (`molecule-core` [#1760](https://github.com/Molecule-AI/molecule-core/pull/1760))
 
 ### 🔧 Fixes
 
 - **SSRF guard in SaaS mode**: previously the SSRF protection was blocking all RFC-1918 private IP ranges (`10/8`, `172.16/12`, `192.168/16`) even in SaaS mode — this was a regression from the earlier SaaS-mode work. The fix wires up the `saasMode` flag correctly so private IPs are allowed in SaaS deployments (for internal service calls), while metadata ranges (`169.254/16`), CGNAT, loopback, and link-local remain blocked in every mode. IPv6 ULA (`fd00::/8`) handling is also now correct. (`molecule-core` [#1692](https://github.com/Molecule-AI/molecule-core/pull/1692))
+- **PUT `/workspaces/:id/files/*path` on SaaS (EC2) workspaces**: fixed a 500 error (`docker not available`) that occurred when saving files from Canvas on SaaS workspaces. The handler now detects non-Docker workspaces via `workspaces.instance_id` and routes writes via EC2 Instance Connect (SSH-backed write with an ephemeral key pair) instead of trying to `docker cp`. (`molecule-core` [#1702](https://github.com/Molecule-AI/molecule-core/pull/1702))
 
 ### 📚 Docs
 
@@ -22,7 +26,51 @@ A quiet day — most activity was internal tooling and security hardening. The S
 
 ### 🧹 Internal
 
+- SaaS Federation v2 tutorial published — clean rewrite of #1613, now with correct HTTP status codes, fleet metrics endpoint, and security model table (`molecule-core` [#1700](https://github.com/Molecule-AI/molecule-core/pull/1700)); Files API SSH-backed write path for SaaS EC2 workspaces — fixes 500 on PUT `/workspaces/:id/files/*path` for SaaS users (`molecule-core` [#1702](https://github.com/Molecule-AI/molecule-core/pull/1702)); Canvas create-workspace dialog now requires hermes runtime model (`molecule-core` [#1714](https://github.com/Molecule-AI/molecule-core/pull/1714)).
 - EC2 Instance Connect SSH tutorial published (`molecule-core` [#1617](https://github.com/Molecule-AI/molecule-core/pull/1617)); AI agent org-scoped key credential model blog published (`molecule-core` [#1614](https://github.com/Molecule-AI/molecule-core/pull/1614)); Phase 30 Day 2 social package ready (`molecule-core` [#1662](https://github.com/Molecule-AI/molecule-core/pull/1662)).
+
+### 🌅 Late-day updates (17:30–23:50 UTC)
+
+#### 🔒 Security
+
+- **Cross-tenant memory poisoning fix** (`molecule-core` [#1791](https://github.com/Molecule-AI/molecule-core/pull/1791)): fixes a bug where `commit_memory` with `scope=TEAM` could write to a sibling workspace's memory store under high concurrency. `commit_memory` now validates `target_workspace_id` against the caller's known peer set before any write.
+- **CWE-78 shell injection hardening** (`molecule-core` [#1885](https://github.com/Molecule-AI/molecule-core/pull/1885)): `shellQuote` now uses `strconv.Quote` for all shell-delimited paths in the EC2 Instance Connect and bastion SSH paths. Defense-in-depth layer hardened; primary protection remains path-validation logic upstream.
+
+#### ✨ New features
+
+- **A2A priority queue — Phase 1** (`molecule-core` [#1892](https://github.com/Molecule-AI/molecule-core/pull/1892)): task dispatch now supports a `priority` field (`low` / `normal` / `high` / `urgent`). High/urgent tasks bypass the normal FIFO queue and are dispatched immediately. Phase 2 (priority inversion deadlock prevention) on the roadmap.
+
+#### 🔧 Fixes
+
+- **A2A queue nil-safe drain** (`molecule-core` [#1893](https://github.com/Molecule-AI/molecule-core/pull/1893), [#1896](https://github.com/Molecule-AI/molecule-core/pull/1896)): `DequeueTask` no longer panics when the in-memory queue map is uninitialized — graceful empty-result returned instead.
+- **Workspaces stuck in `provisioning` after失败** (`molecule-core` [#1794](https://github.com/Molecule-AI/molecule-core/pull/1794)): provisioner now transitions workspaces to `failed` state with a descriptive error message instead of leaving them orphaned in `provisioning`.
+- **Dedup settings hooks double-fire** (`molecule-core` [#1797](https://github.com/Molecule-AI/molecule-core/pull/1797)): the `dedup_settings_hooks` registry now correctly unsubscribes after one fire — eliminates the 3–4× duplicate hook execution observed in CI.
+- **Semantic memory search returning stale results** (`molecule-core` [#1778](https://github.com/Molecule-AI/molecule-core/pull/1778)): pgvector index now refreshes synchronously on `commit_memory` write instead of on a 5-minute background cycle.
+- **pgvector migration race in E2E CI** (`molecule-core` [#1777](https://github.com/Molecule-AI/molecule-core/pull/1777)): `CREATE EXTENSION` wrapped in `IF NOT EXISTS` inside a `DO` block — eliminates E2E CI flakiness on fresh DB spin-up.
+- **EC2 Instance Connect endpoint not found in us-west-2** (`molecule-core` [#1779](https://github.com/Molecule-AI/molecule-core/pull/1779)): Instance Connect endpoint SDK call now falls back gracefully to direct SSM session when the EIC endpoint is unavailable in a region.
+- **Canvas topology overlay edge labels clipped** (`molecule-core` [#1802](https://github.com/Molecule-AI/molecule-core/pull/1802)): SVG edge labels now respect viewport bounds; labels that would render off-screen are repositioned.
+- **Audit trail panel not loading for large workspaces** (`molecule-core` [#1854](https://github.com/Molecule-AI/molecule-core/pull/1854)): audit log fetch now uses cursor-based pagination (100 events per page) instead of returning all events at once.
+- **Hermes `response_format` not forwarded to MiniMax** (`molecule-core` [#1861](https://github.com/Molecule-AI/molecule-core/pull/1861)): `response_format=json_schema` now propagates through the model config passthrough for hermes/MiniMax-M2.7-highspeed workspaces.
+- **Memory Inspector panel memory leak** (`molecule-core` [#1871](https://github.com/Molecule-AI/molecule-core/pull/1871)): `useMemoryStore` hook now correctly cancels the SSE subscription on panel unmount.
+- **Token revocation cache stale-read window** (`molecule-core` [#1888](https://github.com/Molecule-AI/molecule-core/pull/1888)): revoked-token invalidation now propagates within 5 s (down from 60 s) — closes the window where a revoked token could still authenticate.
+- **TenantGuard same-origin bypass (regression)** (`molecule-core` [#1898](https://github.com/Molecule-AI/molecule-core/pull/1898)): fixes a regression introduced in the Phase 33 cloudflare-removal change that re-opened the TenantGuard same-origin bypass for EC2 tenant Canvas deployments.
+
+#### 📚 Docs
+
+- **Chrome DevTools MCP tutorial** (`docs` [#1798](https://github.com/Molecule-AI/docs/pull/1798)): hands-on guide for debugging Molecule AI agents in-browser using Chrome's built-in MCP inspector.
+- **Phase 34 launch page** (`docs` [#1799](https://github.com/Molecule-AI/docs/pull/1799)): public-facing launch collateral for GA scheduled 2026-04-30.
+- **Tool Trace demo environment** (`docs` [#1844](https://github.com/Molecule-AI/docs/pull/1844)): interactive demo showing the tool trace inspector in action, with sample run data.
+- **Enterprise battlecard** (`docs` [#1864](https://github.com/Molecule-AI/docs/pull/1864)): competitive positioning doc for sales and enterprise evaluation teams.
+
+#### 🧹 Internal
+
+- `a2a-sdk` hot-pinned to `0.3.x` across all workspace template repos (`molecule-core` [#1890](https://github.com/Molecule-AI/molecule-core/pull/1890)); SDK upgrade path documented in `KI-009` (`internal` [#1631](https://github.com/Molecule-AI/internal/issues/1631)).
+- Phase 34 CI matrix expanded to cover Node 22 and Go 1.24 (`molecule-ci`).
+
+#### 🔧 Runtime fixes
+
+- **Heartbeat 401 retry** (`molecule-ai-workspace-runtime` [#40](https://github.com/Molecule-AI/molecule-ai-workspace-runtime/pull/40)): heartbeat worker now retries with fresh token on 401 before declaring the workspace unreachable — eliminates false `disconnected` status during token rotation.
+- **LLM token auto-detect** (`molecule-ai-workspace-runtime` [#38](https://github.com/Molecule-AI/molecule-ai-workspace-runtime/pull/38)): hermes runtime now auto-detects `max_tokens` from model context window and request timeout when not explicitly configured.
 
 ---
 

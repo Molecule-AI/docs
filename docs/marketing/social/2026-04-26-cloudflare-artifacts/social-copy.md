@@ -52,7 +52,7 @@ curl -X POST .../artifacts/repos/dev-agent-workspace/fork \
 Agents can branch, fork, push, and pull their own work.
 
 Short-lived credentials — tokens minted per session, auto-revoked.
-Edge-hosted on Cloudflare's network — sub-50ms from anywhere.
+Edge-hosted on Cloudflare's global network — close to wherever your agents run.
 
 ---
 

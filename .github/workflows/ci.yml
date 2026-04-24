@@ -6,7 +6,12 @@ on:
     branches: [main]
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Self-hosted Mac mini — this repo is private and the org's
+    # GitHub-hosted minute budget is exhausted (every ubuntu-latest job
+    # dies in 2s with no step output). Per the 2026-04-22 carve-out:
+    # private repos run on self-hosted; public repos use ubuntu-latest
+    # (still free).
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

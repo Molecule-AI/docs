@@ -39,14 +39,15 @@ Every long-running agent task carries this risk by default.
 Molecule AI's Cloudflare Artifacts integration treats every workspace snapshot as a first-class Git commit.
 
 ```bash
-# Create a Git repo for the workspace
-curl -X POST https://your-org.moleculesai.app/artifacts/repos \
-  -H "Authorization: Bearer $ORG_API_KEY" \
+# Attach a Git repo to your workspace
+curl -X POST https://your-org.moleculesai.app/workspaces/$WORKSPACE_ID/artifacts \
+  -H "Authorization: Bearer $WORKSPACE_TOKEN" \
   -d '{"name": "dev-agent-workspace"}'
 
 # Fork before a risky refactor
-curl -X POST .../artifacts/repos/dev-agent-workspace/fork \
-  -d '{"name": "dev-agent-workspace/experiment"}'
+curl -X POST https://your-org.moleculesai.app/workspaces/$WORKSPACE_ID/artifacts/fork \
+  -H "Authorization: Bearer $WORKSPACE_TOKEN" \
+  -d '{"name": "dev-agent-workspace-experiment"}'
 ```
 
 Agents can branch, fork, push, and pull their own work.

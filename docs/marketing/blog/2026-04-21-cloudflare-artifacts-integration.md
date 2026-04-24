@@ -30,14 +30,13 @@ This is a first-mover integration. As of 2026-04-17, no other AI agent platform 
 
 ## How It Works in Molecule AI
 
-The integration adds four operations to the workspace API:
+The integration adds three operations to the workspace API:
 
 | Operation | What it does |
 |-----------|-------------|
-| `POST /artifacts/repos` | Create a Git repo for the workspace |
-| `POST /artifacts/repos/:name/fork` | Fork an isolated copy (branch-equivalent) |
-| `POST /artifacts/repos/:name/import` | Bootstrap from an external Git URL |
-| `POST /artifacts/tokens` | Mint a short-lived Git credential |
+| `POST /workspaces/:id/artifacts` | Attach a CF Artifacts repo to the workspace |
+| `POST /workspaces/:id/artifacts/fork` | Fork an isolated copy (branch-equivalent) |
+| `POST /workspaces/:id/artifacts/token` | Mint a short-lived Git credential |
 
 All tokens expire automatically. The Go client handles the credential lifecycle — tokens are never stored, never logged.
 
@@ -68,16 +67,16 @@ This is especially powerful for:
 export CLOUDFLARE_API_TOKEN="your-cf-api-token"
 export CLOUDFLARE_ARTIFACTS_NAMESPACE="your-namespace"
 
-# Create a repo for the workspace
-curl -X POST https://your-deployment.moleculesai.app/artifacts/repos \
-  -H "Authorization: Bearer $ORG_API_KEY" \
+# Attach a Git repo to your workspace
+curl -X POST https://your-deployment.moleculesai.app/workspaces/$WORKSPACE_ID/artifacts \
+  -H "Authorization: Bearer $WORKSPACE_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name": "my-workspace", "description": "Dev agent workspace"}'
 
 # Fork before an experimental change
-curl -X POST https://your-deployment.moleculesai.app/artifacts/repos/my-workspace/fork \
-  -H "Authorization: Bearer $ORG_API_KEY" \
-  -d '{"name": "my-workspace/experiment"}'
+curl -X POST https://your-deployment.moleculesai.app/workspaces/$WORKSPACE_ID/artifacts/fork \
+  -H "Authorization: Bearer $WORKSPACE_TOKEN" \
+  -d '{"name": "my-workspace-experiment"}'
 ```
 
 From the Molecule AI Canvas, navigate to **Workspaces → Your Workspace → Artifacts** to view repos, fork branches, and manage credentials visually.

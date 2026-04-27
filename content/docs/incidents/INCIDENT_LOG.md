@@ -88,7 +88,7 @@ Commit `d513a0ced549ef2be8903a7b4794256110ba1805` on staging (merged to main via
 |---|------------|-------|--------|
 | 1 | ANTHROPIC_AUTH_TOKEN | `sk-cp-lHt-QFSyZwZxeo...KVw` | ⚠️ Revoked or inactive (404 on API call) |
 | 2 | GITHUB_TOKEN | `github_pat_11BPRRWQI0m...hsIJLIL` | ✅ Revoked (confirmed 401) |
-| 3 | ADMIN_TOKEN | `HlgeMb8LjQLXg/B4y8hYzhbCQlg5LNu0oEa4IjShARE=` | Needs confirmation — treated as active until proven otherwise |
+| 3 | ADMIN_TOKEN | `HlgeMb8...ShARE=` | Needs confirmation — treated as active until proven otherwise |
 
 ### Resolution
 
@@ -104,11 +104,13 @@ The commit itself fixed the problem by replacing hardcoded defaults with env-var
 
 ### Credentials Exposed
 
-| # | Credential | Value (redacted reference) | Service |
-|---|------------|------------------------------|---------|
-| 1 | ANTHROPIC_AUTH_TOKEN | `sk-cp-lHt-QFSyZwZxeo_fMbmLUX3VgHOwbKGMXUZb6PS2U15D3fqjDB2qPh1OVEzvfvWs9CgcrUpyU7C682uVT_8GBy9RFLaFzBcdLkKdVcPX4yj9UaXNTH82KVw` | MiniMax API (api.minimax.io/anthropic) |
-| 2 | GITHUB_TOKEN | `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` | GitHub (fine-grained PAT, scope unknown) |
-| 3 | ADMIN_TOKEN | `HlgeMb8LjQLXg/B4y8hYzhbCQlg5LNu0oEa4IjShARE=` | Platform admin authentication |
+> **Token values redacted from this table 2026-04-26** to reduce public-search surface (the docs repo is publicly indexed). Short-suffix references match the convention in the Blast Radius table below (lines 134-137). Full values remain in `molecule-core` git history per the F1088 closure decision (no BFG scrub).
+
+| # | Credential | Value (short suffix) | Service |
+|---|------------|----------------------|---------|
+| 1 | ANTHROPIC_AUTH_TOKEN | `sk-cp-...KVw` | MiniMax API (api.minimax.io/anthropic) |
+| 2 | GITHUB_TOKEN | `github_pat_...hsIJLIL` | GitHub (fine-grained PAT, scope unknown) |
+| 3 | ADMIN_TOKEN | `HlgeMb8...ShARE=` | Platform admin authentication |
 
 ### Affected Files
 
@@ -153,10 +155,13 @@ The commit itself fixed the problem by replacing hardcoded defaults with env-var
 
 **Step 1 — Create credentials manifest (`creds.txt`) [NOT NEEDED]:**
 ```
-HlgeMb8LjQLXg/B4y8hYzhbCQlg5LNu0oEa4IjShARE=
-sk-cp-lHt-QFSyZwZxeo_fMbmLUX3VgHOwbKGMXUZb6PS2U15D3fqjDB2qPh1OVEzvfvWs9CgcrUpyU7C682uVT_8GBy9RFLaFzBcdLkKdVcPX4yj9UaXNTH82KVw
-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
+<ADMIN_TOKEN value>
+<MiniMax sk-cp-... value>
+<GitHub fine-grained PAT value>
 ```
+Full token values redacted from this doc 2026-04-26 (see note in the
+Credentials Exposed table above). Pull from the Core-Security incident
+ticket if a future revival of this BFG procedure is needed.
 
 **Step 2 — Clean origin/main:**
 ```bash

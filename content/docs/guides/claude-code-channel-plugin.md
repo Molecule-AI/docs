@@ -174,14 +174,14 @@ Only one channel server runs per host — multiple instances would race the dedu
 
 The plugin started before you filled in `.env`. Re-run the snippet from Step 2, then re-launch Claude Code.
 
-### "molecule channel: poll <ws-id> returned 401"
+### "molecule channel: poll `<ws-id>` returned 401"
 
 Bearer token mismatch. Two common causes:
 
 - The token in `MOLECULE_WORKSPACE_TOKENS` doesn't match the workspace whose ID is in the corresponding position of `MOLECULE_WORKSPACE_IDS`. Verify same-order pairing.
 - The workspace was rotated and the token was revoked. Generate a new token from the canvas Settings tab (or `POST /admin/workspaces/:id/tokens`).
 
-### "molecule channel: poll <ws-id> returned 404"
+### "molecule channel: poll `<ws-id>` returned 404"
 
 Either the workspace doesn't exist or the `MOLECULE_PLATFORM_URL` is wrong. Confirm:
 

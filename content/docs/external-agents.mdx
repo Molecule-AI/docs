@@ -244,6 +244,24 @@ create (POST /workspaces) → online (register) → offline (heartbeat expires)
 - No auto-restart (agent manages its own process)
 - Paused external workspaces skip heartbeat monitoring
 
+### `removed` status — 410 Gone (#2429)
+
+Once a workspace transitions to `removed`:
+
+- **Tokens are revoked immediately**, but the row stays in the DB for audit-trail purposes
+- `GET /workspaces/:id` returns **410 Gone** with `{error: "workspace removed", id, removed_at, hint}` so callers fail fast at startup instead of after ~60s of heartbeat 401s
+- `DELETE /workspaces/:id` is the canonical removal trigger
+- Audit / admin tooling that intentionally wants the legacy 200 + body shape opts in via `GET /workspaces/:id?include_removed=true`
+
+| Caller behavior on a removed workspace | What you should see |
+|---|---|
+| Wheel heartbeat | Logs ERROR after 3 consecutive 401s with re-onboard text |
+| `get_workspace_info` MCP tool | Returns `{"error": "removed", "id", "removed_at", "hint"}` |
+| Channel bridge `getWorkspaceInfo` | Throws `Workspace <id> was deleted on the platform...` |
+| Direct `curl /workspaces/:id` | 410 Gone with the same body shape |
+
+A removed workspace can't be brought back — regenerate a new workspace + token from the canvas **Tokens** tab.
+
 ## Security
 
 - Bearer token required on all authenticated endpoints

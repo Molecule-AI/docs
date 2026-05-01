@@ -1,3 +1,32 @@
 @import 'tailwindcss';
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
+
+/* Warm-paper light theme — aligned with the landing page (moleculesai.app).
+   Tokens map fumadocs' @theme variables onto our brand palette so docs,
+   marketing, and the canvas read as one product. */
+@theme {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+
+  --color-fd-background: #fafaf7;
+  --color-fd-foreground: #15181c;
+  --color-fd-muted: #f3f1ec;
+  --color-fd-muted-foreground: #5a5e66;
+  --color-fd-popover: #ffffff;
+  --color-fd-popover-foreground: #15181c;
+  --color-fd-card: #ffffff;
+  --color-fd-card-foreground: #15181c;
+  --color-fd-border: #e6e2d8;
+  --color-fd-primary: #3b5bdb;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: #efece4;
+  --color-fd-secondary-foreground: #15181c;
+  --color-fd-accent: #efece4;
+  --color-fd-accent-foreground: #15181c;
+  --color-fd-ring: #3b5bdb;
+  --color-fd-overlay: hsla(0, 0%, 0%, 0.18);
+}
+
+/* Dark mode keeps fumadocs' neutral defaults — readers expect docs sites
+   to honor their system preference, and our landing only ships light. */

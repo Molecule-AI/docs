@@ -104,14 +104,15 @@ Cline) and restart the client.
 
 ## Optional — declare your identity & capabilities
 
-Three additional env vars control how your workspace appears on the
-canvas and to peer agents calling `list_peers`:
+Four additional env vars control how your workspace appears on the
+canvas and how the wheel's inbound-delivery contract behaves:
 
 | Env var | What it sets | Default |
 |---|---|---|
 | `MOLECULE_AGENT_NAME` | Display name on the canvas card | `molecule-mcp-{id[:8]}` |
 | `MOLECULE_AGENT_DESCRIPTION` | One-line description in Details/Skills tabs | empty |
 | `MOLECULE_AGENT_SKILLS` | Comma-separated skill names — e.g. `research,code-review,memory-curation` | `[]` |
+| `MOLECULE_MCP_POLL_TIMEOUT_SECS` | How long the agent blocks on `wait_for_message` per turn (the universal poll path). `0` disables polling for push-only mode (Claude Code with `--dangerously-load-development-channels`). Above 60 clamps to 60. | `2` |
 
 Skills are surfaced two places:
 
@@ -158,7 +159,7 @@ status. If the workspace is still offline after ~30s, check
 | `delegate_task` | Send a task to a peer and wait for the reply |
 | `delegate_task_async` | Fire-and-forget delegation; result lands in inbox |
 | `check_task_status` | Poll an async delegation |
-| `wait_for_message` | Block until the next inbound A2A message arrives |
+| `wait_for_message` | Block until the next inbound A2A message arrives — the universal inbound-delivery primitive (see [Inbound delivery](#inbound-delivery-universal-poll-optional-push)) |
 | `inbox_peek` / `inbox_pop` | Inspect / acknowledge queued inbound messages |
 | `send_message_to_user` | Push a chat bubble to the user's canvas |
 | `commit_memory` / `recall_memory` | Persistent KV (local / team / global scope) |
@@ -168,29 +169,63 @@ External runtimes can't accept inbound HTTP, so the wheel polls
 through `wait_for_message` + `inbox_peek` / `inbox_pop`. Use those
 instead of waiting for an HTTP webhook — there isn't one.
 
-### Push-UX for notification-capable hosts
+### Inbound delivery: universal poll, optional push
 
-On top of the polling tools, the wheel emits a JSON-RPC notification
-(`notifications/claude/channel`) on every new inbound message. Hosts
-that recognise that method (Claude Code today; any compliant client
-tomorrow) treat the notification as a conversation interrupt — the
-message text becomes the next agent turn without the agent having to
-call `wait_for_message` first.
+Inbound messages reach the agent via one of two paths. The wheel
+exposes both; which one fires depends on the host's capabilities.
+Both paths converge on the same `inbox_pop` ack so dedup is automatic.
 
-Hosts that don't recognise the method silently ignore it, so the same
-wheel works for both push-capable and poll-only runtimes. There is no
-config flag to toggle: pollers keep polling, notification-capable hosts
-get push automatically.
+**Poll path (universal default — works on every spec-compliant MCP
+client).** The wheel's `initialize` handshake includes an `instructions`
+field telling the agent: *"At the start of every turn, before producing
+your final response, call `wait_for_message(timeout_secs=N)` to check
+for inbound messages."* Every MCP client surfaces `instructions` to
+the agent's system prompt automatically, so Claude Code, Cursor, Cline,
+OpenCode, hermes-agent, and codex all receive the polling contract
+without any per-client wiring. The 2-second default is tuned for the
+"peer A2A landed seconds before my turn started" common case; tune
+via the `MOLECULE_MCP_POLL_TIMEOUT_SECS` env var
+(see "Optional — declare your identity & capabilities" above).
+
+**Push path (Claude Code with channel push enabled — strictly
+better when available).** On top of the poll path, the wheel emits a
+JSON-RPC notification (`notifications/claude/channel`) on every new
+inbound message and declares the matching `experimental.claude/channel`
+capability in `initialize`. Claude Code with channel push enabled
+turns the notification into an inline `<channel source="molecule"
+...>` synthetic user turn — zero agent-side polling cost, zero
+per-turn stall.
+
+**Today (research preview), Claude Code's channel push requires
+either the `--dangerously-load-development-channels` launch flag OR
+an entry on Claude Code's approved channel-server allowlist.** The
+wheel ships the wire shape correctly, but a standard `claude` launch
+without the flag silently drops the notification — which is why the
+poll path has to be the floor.
+
+Set `MOLECULE_MCP_POLL_TIMEOUT_SECS=0` to disable polling entirely
+when you're running Claude Code with the dev-channels flag and don't
+want the per-turn stall. The instructions adapt automatically: with
+polling disabled, the agent is told push is the only delivery path.
+
+| Client | Push path | Poll path |
+|---|---|---|
+| Claude Code with `--dangerously-load-development-channels` | ✅ inline tag | ✅ also works |
+| Claude Code (standard launch) | ❌ silently dropped | ✅ via instructions |
+| Cursor / Cline / OpenCode / codex | ❌ method ignored | ✅ via instructions |
+| hermes-agent | ❌ method ignored | ✅ naturally polls every cycle |
 
 ### MCP spec compliance
 
 The wheel speaks MCP protocol version **2024-11-05** over stdio
-JSON-RPC, declaring only the `tools` capability. It implements the
-standard request methods and nothing client-specific:
+JSON-RPC. It declares the standard `tools` capability plus the
+`experimental.claude/channel` capability for the optional push path
+(see [Inbound delivery](#inbound-delivery-universal-poll-optional-push)).
+It implements the standard request methods and nothing client-specific:
 
 | MCP method | Behavior |
 |---|---|
-| `initialize` | Echoes `protocolVersion: "2024-11-05"`, `serverInfo`, declares `tools` capability |
+| `initialize` | Echoes `protocolVersion: "2024-11-05"`, `serverInfo`, declares `tools` + `experimental.claude/channel` capabilities, returns the dual-path delivery `instructions` |
 | `notifications/initialized` | No-op (no response — per spec) |
 | `tools/list` | Returns all exposed tools in one response (no pagination cursor — surface is small) |
 | `tools/call` | Dispatches by name, returns `content: [{ type: "text", text: ... }]` |
@@ -198,8 +233,10 @@ standard request methods and nothing client-specific:
 
 The push-UX notification (`notifications/claude/channel`) is the only
 non-standard method emitted, and it's a one-way notification — clients
-that don't handle it discard it per JSON-RPC semantics. No part of the
-wheel's tool surface depends on a client recognizing it.
+that don't handle it discard it per JSON-RPC semantics. The poll path
+(via the standard `instructions` field) carries delivery for those
+clients, so no part of the wheel's tool surface depends on a client
+recognizing the notification.
 
 This means **any spec-compliant MCP client** can drive the wheel:
 Claude Code, Cursor, Cline, OpenCode, hermes-agent, or anything else

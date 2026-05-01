@@ -1,0 +1,164 @@
+---
+title: Listing on the Marketplace
+description: How builders ship plugins, agents, and bundles to every Molecule organization.
+---
+
+## Overview
+
+The Marketplace is open to external builders. If you have authored reusable
+agent infrastructure — an MCP plugin, a single-agent skill, or a full team
+bundle — you can list it and reach every Molecule organization. We handle
+distribution, billing, and policy; you keep the IP and the upgrade cadence.
+
+This page walks through the three-step workflow: **Build · List · Earn**.
+
+---
+
+## 1. Build
+
+You author your artifact against the open Molecule SDK. The same primitives
+we use internally are available to you:
+
+- **Workspace** — the durable boundary for memory, members, and policy
+- **A2A** — agent-to-agent messaging, used to talk to runtimes you don't
+  own (LangGraph, CrewAI, etc.)
+- **Memory scopes** — hierarchical, governance-aware persistence
+- **Audit** — every action is captured at the orchestration layer
+
+Pick the tier that matches your artifact's granularity:
+
+### L1 — Plugins
+
+A plugin is an MCP server (or an agentskills.io pack). The
+[two-axis source/shape model](/docs/plugins) describes how the workspace
+runtime loads it. Authoring requirements:
+
+- A `plugin.yaml` manifest declaring tools, required scopes, and runtime
+  compatibility.
+- A README documenting the tool surface and side effects.
+- For MCP plugins: an HTTP or stdio MCP server pinned to a tagged commit.
+
+A reference plugin lives at
+[`Molecule-AI/molecule-ai-plugin-template`](https://github.com/Molecule-AI/molecule-ai-plugin-template).
+
+### L2 — Agents
+
+An agent is a single workspace member with a baked-in prompt + tools +
+policy. Authoring requirements:
+
+- An `agent.yaml` manifest declaring system prompt, required L1 plugins,
+  scope reads/writes, and approval triggers.
+- A `prompts/` directory with the system prompt and any reusable templates.
+- A `tests/` directory exercising the prompt against canned scenarios.
+
+Reference: [`Molecule-AI/molecule-ai-agent-template`](https://github.com/Molecule-AI/molecule-ai-agent-template).
+
+### L3 — Bundles
+
+A bundle ships a complete team topology — a root agent plus children, each
+with its own scope and memory. Authoring requirements:
+
+- A `bundle.yaml` declaring members, their scopes, and the policy graph
+  (which scopes the root can write through, which approvals route to
+  humans).
+- A `members/` directory containing member-specific overrides if any
+  member is a fork of an L2 agent.
+- A `topology.svg` diagram (auto-rendered from `bundle.yaml`, but you can
+  override).
+
+Reference: [`Molecule-AI/molecule-ai-bundle-template`](https://github.com/Molecule-AI/molecule-ai-bundle-template).
+
+---
+
+## 2. List
+
+Submit through the **Creator Portal** at
+[`https://moleculesai.app/creators`](https://moleculesai.app/creators).
+The submission flow:
+
+1. **Connect** — link the GitHub repository hosting your artifact. We pull
+   from tagged releases; we never re-tag or modify your code.
+2. **Manifest check** — we validate `plugin.yaml` / `agent.yaml` /
+   `bundle.yaml` against the schema for your tier and surface any gaps.
+3. **Static analysis** — credential-shape scan, prompt-injection-pattern
+   scan, and dependency vulnerability check on every tagged release.
+4. **Sandbox boot** — your artifact is mounted into a throwaway workspace
+   to verify it boots, declares its scopes correctly, and surfaces a
+   reasonable error path.
+5. **Trust tier** — every artifact starts at **Community**. Apply for
+   **Partner** or **Verified** review once you have a couple of releases
+   under your belt.
+
+Pricing is configured at submission:
+
+- **Free** — no charge to install.
+- **Per-seat** — a flat monthly amount per workspace member that mounts
+  the artifact.
+- **Per-use** — metered against a unit you define (token calls, runs,
+  alerts handled).
+- **Hybrid** — base seat fee plus metered overages.
+
+You can change pricing on subsequent releases; existing installs are
+grandfathered to the version they pinned.
+
+---
+
+## 3. Earn
+
+Once your listing is live, you receive:
+
+- **Distribution** — every Molecule organization sees your listing in the
+  Marketplace UI, gated only by their policy (`min_trust`, region, etc.).
+- **Billing** — Molecule handles the charge to the installing
+  organization, deducts the platform fee (15% as of writing; check the
+  current rate in the Creator Portal), and pays out monthly.
+- **Audit visibility** — you see install counts, version distribution,
+  and aggregated usage metrics in the Creator Portal. You do **not** see
+  per-organization data.
+- **Upgrade cadence** — semver: bump tags, organizations on a `^range`
+  pin pull updates on their next workspace redeploy. Major bumps require
+  re-approval of any new scopes.
+
+---
+
+## Policy & Safety
+
+By listing, you agree to:
+
+- **No exfiltration** — your code does not transmit organization data
+  outside the scopes it declares.
+- **Pinned releases** — every version is pinned to an immutable commit;
+  retagging is not permitted.
+- **Disclose model usage** — if your agent calls an LLM API, declare the
+  provider and model so enterprise plans can route through their own
+  keys.
+- **Respect approval triggers** — if your `agent.yaml` declares a scope
+  that requires human approval (e.g. `write: pull_request_merge`), you
+  must call the approval API before acting.
+
+Listings that violate these terms are de-listed; refunds for affected
+installs are paid from your account.
+
+---
+
+## Maintenance
+
+Once a listing is live, you can:
+
+- Push new tagged releases — they enter the static-analysis + sandbox
+  flow automatically.
+- Mark older versions as **deprecated** to nudge installs to upgrade.
+- File **security advisories** that surface to every organization on a
+  vulnerable pinned version.
+- Yank a release in the rare case of a critical bug; organizations
+  pinned to the yanked tag are notified and offered the next safe version.
+
+---
+
+## See also
+
+- [Marketplace](/docs/marketplace) — tier model and installation overview
+- [Plugins](/docs/plugins) — L1 plugin source/shape mechanics
+- [Workspace Configuration](/docs/workspace-config) — pinning marketplace
+  entries in `workspace.yaml`
+- [Security &raquo; OWASP Agentic Top 10](/docs/security/owasp-agentic-top-10) — supply-chain considerations relevant to bundle authors

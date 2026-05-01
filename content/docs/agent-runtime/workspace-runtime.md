@@ -113,6 +113,14 @@ fi
 - `adapter.create_executor()` runs
 - `executor.execute()` is invoked once against a stub `RequestContext`/`EventQueue` with `MOLECULE_SMOKE_TIMEOUT_SECS` (default 5s); a clean timeout exits 0, an import error exits non-zero
 
+### What the gate does NOT prove
+
+A green gate means **"imports are healthy enough that `executor.execute()` reaches its body"** — that's the regression class the gate exists to catch (lazy `from x import y` inside an `if`-branch, or `importlib.import_module()` on a path that breaks after a wheel bump).
+
+It does **not** prove that `execute()` produces the right output for real input. Adapters that make real I/O calls inside `execute()` (subprocess to a gateway, httpx call to an upstream LLM) will time out under the harness's default 5s window, and the gate treats a clean timeout as success. The stub `RequestContext` carries an empty user message and the harness never inspects what `execute()` writes back.
+
+If you need correctness coverage, write a separate integration test that runs the workspace against real or mocked infrastructure — the smoke gate is a strict subset.
+
 ### Stub env the smoke harness sets
 
 | Var | Value |

@@ -1,0 +1,166 @@
+---
+title: Marketplace
+description: A tiered library of plugins, agents, and bundles you can mount into any Molecule workspace.
+---
+
+## Overview
+
+The Molecule **Marketplace** is the distribution surface for reusable agent
+infrastructure. It surfaces three tiers of artifacts — from a single MCP
+plugin to a full team topology — and the same governance, memory, and audit
+substrate runs underneath each one.
+
+You browse and install via the Marketplace UI at
+[`https://moleculesai.app`](https://moleculesai.app), or pin entries from
+your `workspace.yaml` for reproducible deployments.
+
+---
+
+## Three Tiers
+
+| Tier | Name | Granularity | Mount as |
+|------|------|-------------|----------|
+| **L1** | Plugins | A single MCP server / tool pack | Tool capability on an agent or workspace |
+| **L2** | Agents | A prebuilt single-agent skill (prompts + tools + policy) | Workspace member |
+| **L3** | Bundles | A full team topology (root + children with their own scopes) | Workspace |
+
+The tier model is intentionally additive — an L3 Bundle is composed of L2
+Agents, which in turn use L1 Plugins. Forking a Bundle gives you the lineage
+to swap any constituent piece without rewiring the operating model.
+
+### L1 — Plugins
+
+Plugins are MCP servers or agentskills.io packs. Examples:
+
+- `postgres` — read/write Postgres with role-scoped credentials
+- `slack` — post and search Slack with workspace-scoped tokens
+- `linear` — create / triage / comment on Linear issues
+- `gh-actions` — query and dispatch GitHub Actions runs
+- `sentry` — read incident timeline, ack alerts
+
+Plugins follow the [two-axis source/shape model](/docs/plugins) and install
+from either a curated `local://` source or a pinned `github://owner/repo#tag`.
+
+### L2 — Agents
+
+Agents are single-purpose skills mounted as a workspace member. They ship with:
+
+- A **system prompt** baked in
+- A **tool manifest** specifying which L1 plugins they require
+- A **policy** declaring scope reads/writes and approval requirements
+
+Examples:
+
+- `code-reviewer` — five-axis review, posts inline comments via `gh-actions`
+- `oncall-triager` — reads Sentry, drafts a runbook step, requests approval before paging
+- `churn-analyst` — periodic Postgres + Stripe rollup, posts a weekly Slack summary
+
+Mount an agent via the workspace UI or `workspace.yaml`:
+
+```yaml
+members:
+  - kind: agent
+    source: marketplace://l2/code-reviewer
+    version: ^1.2.0
+    scopes:
+      - read: pull_requests
+      - write: pull_request_comments
+```
+
+### L3 — Bundles
+
+Bundles are complete team topologies. A bundle ships:
+
+- A **root agent** that coordinates the team
+- One or more **child agents**, each with its own scope, memory, and tool
+  list
+- A **policy graph** declaring which scopes the root can write through and
+  which approvals route to humans
+
+Examples:
+
+- `growth-team` — root strategist + content-writer + analytics-rollup +
+  experiment-designer
+- `platform-ops` — root SRE + on-call triager + change-reviewer +
+  incident-scribe
+- `revenue-pod` — root commercial lead + churn-analyst + cs-summarizer +
+  expansion-prospector
+
+Mount a bundle as a workspace:
+
+```yaml
+workspace:
+  bundle: marketplace://l3/platform-ops
+  bundle_version: ^0.4.0
+  overrides:
+    members:
+      change-reviewer:
+        scopes:
+          - read: ["github:Molecule-AI/*", "linear:eng"]
+```
+
+Forking is encouraged — the bundle author publishes the operating model;
+your team tunes it for your processes without rebuilding the substrate.
+
+---
+
+## Trust Tiers
+
+Every Marketplace entry carries a **trust tier** that signals review depth
+and supply-chain provenance:
+
+| Trust | Vetting | Provenance |
+|-------|---------|------------|
+| **Verified** | Reviewed by Molecule for safety, prompt-injection resistance, and policy correctness | Published from a Molecule-controlled identity |
+| **Partner** | Reviewed by a Marketplace partner; carries the partner's identity badge | Published from a verified partner account |
+| **Community** | Self-published; static analysis + sandbox runtime; no human review | Pinned to a specific commit SHA |
+
+The trust tier is shown on every listing card and gated by enterprise
+policy: organizations on the Enterprise plan can restrict installs to
+Verified-only via `policy.marketplace.min_trust = verified`.
+
+---
+
+## Installing from the Marketplace
+
+Browse listings at [`https://moleculesai.app`](https://moleculesai.app).
+Each card shows tier (L1/L2/L3), trust badge, runtime compatibility, and
+required scopes. The "Install" flow:
+
+1. Picks a workspace (or creates a new one) to mount into.
+2. Surfaces required scopes for review and approval.
+3. Pins to a specific version (semver range, exact tag, or commit SHA).
+4. Writes the entry into your `workspace.yaml` and triggers a workspace
+   redeploy.
+
+You can also install non-interactively:
+
+```bash
+curl -X POST https://app.moleculesai.app/cp/orgs/$ORG/marketplace/install \
+  -H "Authorization: Bearer $CP_ADMIN_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tier": "l2",
+    "slug": "code-reviewer",
+    "version": "^1.2.0",
+    "workspace_id": "ws_abc123"
+  }'
+```
+
+---
+
+## Listing on the Marketplace
+
+If you have built reusable agent infrastructure — a plugin, agent, or
+bundle — you can list it on the Marketplace and reach every Molecule
+organization. See [Listing on the Marketplace](/docs/marketplace/creators)
+for the full builder workflow.
+
+---
+
+## See also
+
+- [Plugins](/docs/plugins) — L1 source/shape model and install mechanics
+- [External Agents](/docs/external-agents) — bringing a non-Molecule agent runtime
+- [Workspace Configuration](/docs/workspace-config) — `workspace.yaml` reference
+- [Listing on the Marketplace](/docs/marketplace/creators) — builder workflow

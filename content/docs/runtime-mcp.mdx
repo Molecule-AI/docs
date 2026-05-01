@@ -182,6 +182,30 @@ wheel works for both push-capable and poll-only runtimes. There is no
 config flag to toggle: pollers keep polling, notification-capable hosts
 get push automatically.
 
+### MCP spec compliance
+
+The wheel speaks MCP protocol version **2024-11-05** over stdio
+JSON-RPC, declaring only the `tools` capability. It implements the
+standard request methods and nothing client-specific:
+
+| MCP method | Behavior |
+|---|---|
+| `initialize` | Echoes `protocolVersion: "2024-11-05"`, `serverInfo`, declares `tools` capability |
+| `notifications/initialized` | No-op (no response — per spec) |
+| `tools/list` | Returns all exposed tools in one response (no pagination cursor — surface is small) |
+| `tools/call` | Dispatches by name, returns `content: [{ type: "text", text: ... }]` |
+| _(unknown method)_ | Returns JSON-RPC error code `-32601` (Method not found) |
+
+The push-UX notification (`notifications/claude/channel`) is the only
+non-standard method emitted, and it's a one-way notification — clients
+that don't handle it discard it per JSON-RPC semantics. No part of the
+wheel's tool surface depends on a client recognizing it.
+
+This means **any spec-compliant MCP client** can drive the wheel:
+Claude Code, Cursor, Cline, OpenCode, hermes-agent, or anything else
+that opens an MCP stdio connection. If your client speaks MCP, it
+speaks the wheel.
+
 ## Heartbeat & lifecycle
 
 The wheel spawns a daemon thread that POSTs `/registry/heartbeat` every

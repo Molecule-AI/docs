@@ -168,6 +168,20 @@ External runtimes can't accept inbound HTTP, so the wheel polls
 through `wait_for_message` + `inbox_peek` / `inbox_pop`. Use those
 instead of waiting for an HTTP webhook — there isn't one.
 
+### Push-UX for notification-capable hosts
+
+On top of the polling tools, the wheel emits a JSON-RPC notification
+(`notifications/claude/channel`) on every new inbound message. Hosts
+that recognise that method (Claude Code today; any compliant client
+tomorrow) treat the notification as a conversation interrupt — the
+message text becomes the next agent turn without the agent having to
+call `wait_for_message` first.
+
+Hosts that don't recognise the method silently ignore it, so the same
+wheel works for both push-capable and poll-only runtimes. There is no
+config flag to toggle: pollers keep polling, notification-capable hosts
+get push automatically.
+
 ## Heartbeat & lifecycle
 
 The wheel spawns a daemon thread that POSTs `/registry/heartbeat` every
@@ -221,6 +235,43 @@ Don't pass `Origin` manually — the wheel sets it. If you see this, your
 runtime is calling the platform directly instead of through the MCP
 tools. Use the tools (`delegate_task`, `send_message_to_user`, etc.)
 rather than hand-rolling HTTP calls.
+
+### Tools call returns 401 / `workspace not found` after working before
+
+The workspace was probably deleted from the canvas (or via DELETE
+`/workspaces/:id`). Deleting a workspace revokes its token immediately,
+even if the workspace card still appears with a "removed" badge for a
+short window. The MCP server itself keeps running, so tool listing
+still succeeds, but every platform call fails.
+
+Regenerate from the canvas **Tokens** tab — a deleted workspace can't
+be brought back; you'll get a new workspace + token pair. Update your
+MCP config and restart your runtime.
+
+### `claude mcp list` shows the new config but tools still 401
+
+`/mcp` reconnect re-spawns the **cached** MCP config from session
+start, not the latest on-disk config. After editing `claude mcp add`
+or your `~/.cursor/mcp.json`, fully exit and relaunch the runtime —
+not just `/mcp`.
+
+A quick way to confirm: `ps aux | grep molecule-mcp` and check the
+PID hasn't changed across `/mcp` reconnects. If the same PID stays
+alive, the runtime is still using the old config.
+
+### `command not found: molecule-mcp` from inside the runtime
+
+The runtime's `PATH` may differ from your interactive shell — common
+on macOS where `~/Library/Python/3.x/bin` is added to login shells but
+not to GUI-launched apps. Use the absolute path in your MCP config:
+
+```bash
+which molecule-mcp
+# /Users/you/Library/Python/3.13/bin/molecule-mcp
+```
+
+Then point `command` at that absolute path in `claude mcp add` /
+`.cursor/mcp.json` / `mcp_servers.yaml`.
 
 ## When to use this vs. the manual A2A path
 

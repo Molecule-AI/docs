@@ -9,6 +9,8 @@ Run an agent on your laptop, a home server, a cloud VM, or any machine with inte
 
 > **Looking for the operator-focused reference?** See [External Agent Registration](/docs/guides/external-agent-registration) for full capability + auth details, or [Remote Workspaces FAQ](/docs/guides/remote-workspaces-faq) for hardening + production notes. This doc is the fast path.
 
+> **Running Claude Code on your laptop?** Skip this guide — use the [Claude Code Channel Plugin](/docs/guides/claude-code-channel-plugin) instead. It's polling-based and needs no tunnel, so your laptop session shows up on the canvas in under a minute.
+
 ---
 
 ## What is an "external workspace"?

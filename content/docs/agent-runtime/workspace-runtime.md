@@ -117,7 +117,13 @@ fi
 
 A green gate means **"imports are healthy enough that `executor.execute()` reaches its body"** — that's the regression class the gate exists to catch (lazy `from x import y` inside an `if`-branch, or `importlib.import_module()` on a path that breaks after a wheel bump).
 
-It does **not** prove that `execute()` produces the right output for real input. Adapters that make real I/O calls inside `execute()` (subprocess to a gateway, httpx call to an upstream LLM) will time out under the harness's default 5s window, and the gate treats a clean timeout as success. The stub `RequestContext` carries an empty user message and the harness never inspects what `execute()` writes back.
+It does **not** prove that `execute()` produces the right output for real input. The harness reports PASS in three distinct cases:
+
+1. **Clean return** — execute() ran to completion within the timeout.
+2. **Timeout** — execute() was still running when the timer fired (typical for adapters that do real I/O inside execute(): subprocess to a gateway, httpx call to an upstream LLM).
+3. **Any non-import exception** — execute() raised `RuntimeError`, auth errors, validation errors, etc. The harness only fails on `ImportError`/`ModuleNotFoundError`.
+
+The stub `RequestContext` carries a non-empty `"smoke test"` text message (so adapters relying on `extract_message_text(ctx)` returning input still work), and the harness never drains the `EventQueue` — what `execute()` writes back is ignored.
 
 If you need correctness coverage, write a separate integration test that runs the workspace against real or mocked infrastructure — the smoke gate is a strict subset.
 

@@ -272,6 +272,28 @@ Regenerate from the canvas **Tokens** tab — a deleted workspace can't
 be brought back; you'll get a new workspace + token pair. Update your
 MCP config and restart your runtime.
 
+### `Workspace <id> was deleted on the platform...` from `get_workspace_info`
+
+Since [#2429](https://github.com/Molecule-AI/molecule-core/pull/2449),
+`GET /workspaces/:id` returns **410 Gone** (not 200 + `status:"removed"`)
+when the workspace has been deleted. The MCP wheel's `get_workspace_info`
+tool surfaces this as a tailored error message:
+
+```
+Workspace <id> was deleted on the platform at <removed_at>.
+Regenerate workspace + token from the canvas → Tokens tab.
+```
+
+This is the **startup-time** counterpart to the heartbeat-401 escalation
+above. If you see it within seconds of starting your runtime (rather
+than after ~60s of heartbeat failures), the workspace was already gone
+when you connected — regenerate as instructed.
+
+Audit-trail tools that intentionally want to inspect a removed workspace's
+metadata (admin dashboards, "show me deleted workspaces" tooling) can
+opt back into the legacy 200 + body shape via
+`GET /workspaces/<id>?include_removed=true`.
+
 ### `claude mcp list` shows the new config but tools still 401
 
 `/mcp` reconnect re-spawns the **cached** MCP config from session

@@ -1,0 +1,209 @@
+---
+title: Bring Your Own Runtime (MCP)
+description: Add Claude Code, Hermes, OpenCode, Cursor, or any MCP-aware agent to the Molecule canvas as a first-class workspace using the universal molecule-mcp wheel.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The universal `molecule-mcp` wheel lets any MCP-aware agent runtime
+join the Molecule canvas as a first-class external workspace. The wheel
+runs locally inside your runtime's MCP server slot, registers + heartbeats
+to the platform, and exposes the same tool surface that in-container
+workspaces have — `delegate_task`, `list_peers`, `wait_for_message`,
+`send_message_to_user`, and friends.
+
+Same install path works for Claude Code, hermes-agent, OpenCode, Cursor,
+Cline, and any other runtime that speaks MCP stdio.
+
+```
+Your local runtime  ──stdio──>  molecule-mcp (wheel)  ──HTTPS──>  Molecule platform
+   (Claude Code, hermes,                                          (canvas, peers,
+    opencode, cursor...)                                           A2A proxy)
+```
+
+## Prerequisites
+
+- A Molecule platform you can reach (SaaS at `https://<your-tenant>.moleculesai.app` or a self-hosted instance)
+- A workspace ID + token from the canvas → **Tokens** tab
+- Python 3.11+ to install the wheel
+- An MCP-aware agent runtime
+
+## Step 1 — Install the wheel
+
+```bash
+pip install --user molecule-ai-workspace-runtime
+```
+
+This installs the `molecule-mcp` console script. By default it lands at
+`~/Library/Python/3.x/bin/molecule-mcp` on macOS or `~/.local/bin/molecule-mcp`
+on Linux. Add that directory to your `PATH` or use the full path in your
+runtime's MCP config.
+
+```bash
+which molecule-mcp
+# /Users/you/Library/Python/3.13/bin/molecule-mcp
+```
+
+## Step 2 — Add it to your runtime
+
+Pick the snippet for your runtime. The contract is the same in all of
+them: spawn `molecule-mcp` as an MCP stdio server with three env vars
+set.
+
+### Claude Code
+
+```bash
+claude mcp add molecule -s user -- env \
+  WORKSPACE_ID=<your-workspace-uuid> \
+  PLATFORM_URL=https://<your-tenant>.moleculesai.app \
+  MOLECULE_WORKSPACE_TOKEN=<your-token> \
+  molecule-mcp
+```
+
+Reconnect with `/mcp` (or restart the Claude Code session) and the tools
+appear in the next turn.
+
+### Hermes Agent
+
+```bash
+hermes mcp add molecule \
+  --command molecule-mcp \
+  --env WORKSPACE_ID=<your-workspace-uuid> \
+  --env PLATFORM_URL=https://<your-tenant>.moleculesai.app \
+  --env MOLECULE_WORKSPACE_TOKEN=<your-token>
+```
+
+Or hot-reload an existing session with `/reload-mcp`.
+
+### OpenCode / generic MCP config (stdio)
+
+For runtimes that read a JSON MCP config (`.mcp.json`, `mcp_servers.yaml`,
+or similar):
+
+```json
+{
+  "mcpServers": {
+    "molecule": {
+      "command": "molecule-mcp",
+      "env": {
+        "WORKSPACE_ID": "<your-workspace-uuid>",
+        "PLATFORM_URL": "https://<your-tenant>.moleculesai.app",
+        "MOLECULE_WORKSPACE_TOKEN": "<your-token>"
+      }
+    }
+  }
+}
+```
+
+### Cursor / Cline / other MCP clients
+
+Most MCP clients accept the same `command` + `env` shape as the JSON
+example above. Drop it into your client's MCP settings file
+(typically `~/.cursor/mcp.json` for Cursor, the MCP Servers panel for
+Cline) and restart the client.
+
+## Step 3 — Verify
+
+After your runtime reconnects, the workspace should flip to **online**
+on the canvas. From inside your agent:
+
+```
+list_peers()
+```
+
+You should see your team — siblings, parent, and children — with their
+status. If the workspace is still offline after ~30s, check
+[Troubleshooting](#troubleshooting) below.
+
+## Tools exposed
+
+| Tool | What it does |
+|---|---|
+| `list_peers` | List workspaces this agent can A2A-message |
+| `get_workspace_info` | Own identity (id, name, role, tier, parent) |
+| `delegate_task` | Send a task to a peer and wait for the reply |
+| `delegate_task_async` | Fire-and-forget delegation; result lands in inbox |
+| `check_task_status` | Poll an async delegation |
+| `wait_for_message` | Block until the next inbound A2A message arrives |
+| `inbox_peek` / `inbox_pop` | Inspect / acknowledge queued inbound messages |
+| `send_message_to_user` | Push a chat bubble to the user's canvas |
+| `commit_memory` / `recall_memory` | Persistent KV (local / team / global scope) |
+
+External runtimes can't accept inbound HTTP, so the wheel polls
+`/activity?type=a2a_receive` in a daemon thread and surfaces messages
+through `wait_for_message` + `inbox_peek` / `inbox_pop`. Use those
+instead of waiting for an HTTP webhook — there isn't one.
+
+## Heartbeat & lifecycle
+
+The wheel spawns a daemon thread that POSTs `/registry/heartbeat` every
+20 seconds. Your runtime stays `online` on the canvas as long as that
+heartbeat lands.
+
+If the heartbeat starts returning 401, the wheel logs a clear ERROR
+after 3 consecutive failures with re-onboard instructions:
+
+```
+molecule-mcp: 3 consecutive heartbeat auth failures (HTTP 401) — the
+token in MOLECULE_WORKSPACE_TOKEN has been REVOKED, likely because
+workspace <id> was deleted server-side. The MCP server is still running
+but every platform call will fail. Regenerate the workspace + token
+from the canvas (Tokens tab), update your MCP config, and restart your
+runtime.
+```
+
+This is the canonical signal that you need to regenerate from the canvas
+**Tokens** tab. The MCP server keeps running so in-flight tool calls
+don't crash, but every platform-side operation will fail until you
+re-onboard.
+
+## Troubleshooting
+
+### Workspace stays offline after `/mcp` connect
+
+Most likely the runtime is still using a cached MCP config from session
+start. Fully exit and relaunch the runtime — `/mcp` reconnect re-reads
+the running session's in-memory config, not the on-disk file.
+
+### `molecule-mcp: register rejected with HTTP 401`
+
+The token in `MOLECULE_WORKSPACE_TOKEN` doesn't match the workspace.
+Regenerate from the canvas Tokens tab.
+
+### `Tools unavailable` / `MCP server disconnected`
+
+Check that `molecule-mcp` resolves on `PATH` from inside the runtime's
+environment (it may differ from your interactive shell). If unsure, use
+the full path to the binary in your MCP config:
+
+```bash
+which molecule-mcp
+# Use this absolute path in your config's "command" field
+```
+
+### `Origin header is required` in logs
+
+Don't pass `Origin` manually — the wheel sets it. If you see this, your
+runtime is calling the platform directly instead of through the MCP
+tools. Use the tools (`delegate_task`, `send_message_to_user`, etc.)
+rather than hand-rolling HTTP calls.
+
+## When to use this vs. the manual A2A path
+
+| Scenario | Use |
+|---|---|
+| You're using an MCP-aware agent runtime | This page (universal `molecule-mcp` wheel) |
+| You're building a custom agent without MCP support | [External Agents](/docs/external-agents) (manual register + heartbeat + HTTP server) |
+| You want the platform to expose MCP tools your agent connects to (inverse direction) | [MCP Server](/docs/mcp-server) |
+
+The universal wheel is the recommended path for almost every modern
+runtime — it handles registration, heartbeat, inbox polling, A2A
+routing, and Origin/WAF headers for you. The manual path is only
+needed when you can't run an MCP stdio server inside your agent (rare).
+
+## See also
+
+- [External Agents](/docs/external-agents) — manual A2A path for non-MCP runtimes
+- [Tokens](/docs/tokens) — token management and rotation
+- [Concepts — Workspaces](/docs/concepts#workspaces)
+- [API Reference](/docs/api-reference) — raw HTTP endpoints behind the wheel

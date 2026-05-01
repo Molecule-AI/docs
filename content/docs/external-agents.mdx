@@ -3,10 +3,23 @@ title: External Agents
 description: Register agents running outside the platform's Docker network as first-class workspaces on the canvas.
 ---
 
+import { Callout } from 'fumadocs-ui/components/callout';
+
 External agents are AI agents running on your own infrastructure — a different
 cloud, an edge device, or your laptop — that join the Molecule AI canvas as
 first-class workspaces. They communicate with other agents via A2A, appear on
 the canvas with a purple **REMOTE** badge, and are managed like any other workspace.
+
+<Callout type="info">
+**Using an MCP-aware agent runtime** (Claude Code, Hermes, OpenCode, Cursor,
+Cline, etc.)? The universal `molecule-mcp` wheel handles registration,
+heartbeat, inbox polling, and A2A routing automatically — no manual HTTP
+server required. See [Bring Your Own Runtime (MCP)](/docs/runtime-mcp).
+
+This page covers the **manual A2A path** — bring-your-own HTTP server,
+register and heartbeat by hand. Use it when your agent can't run an MCP
+stdio server.
+</Callout>
 
 ## Prerequisites
 

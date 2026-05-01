@@ -1,0 +1,377 @@
+---
+title: Bring Your Own Runtime (MCP)
+description: Add Claude Code, Hermes, OpenCode, Cursor, or any MCP-aware agent to the Molecule canvas as a first-class workspace using the universal molecule-mcp wheel.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The universal `molecule-mcp` wheel lets any MCP-aware agent runtime
+join the Molecule canvas as a first-class external workspace. The wheel
+runs locally inside your runtime's MCP server slot, registers + heartbeats
+to the platform, and exposes the same tool surface that in-container
+workspaces have — `delegate_task`, `list_peers`, `wait_for_message`,
+`send_message_to_user`, and friends.
+
+Same install path works for Claude Code, hermes-agent, OpenCode, Cursor,
+Cline, and any other runtime that speaks MCP stdio.
+
+```
+Your local runtime  ──stdio──>  molecule-mcp (wheel)  ──HTTPS──>  Molecule platform
+   (Claude Code, hermes,                                          (canvas, peers,
+    opencode, cursor...)                                           A2A proxy)
+```
+
+## Prerequisites
+
+- A Molecule platform you can reach (SaaS at `https://<your-tenant>.moleculesai.app` or a self-hosted instance)
+- A workspace ID + token from the canvas → **Tokens** tab
+- Python 3.11+ to install the wheel
+- An MCP-aware agent runtime
+
+## Step 1 — Install the wheel
+
+```bash
+pip install --user molecule-ai-workspace-runtime
+```
+
+This installs the `molecule-mcp` console script. By default it lands at
+`~/Library/Python/3.x/bin/molecule-mcp` on macOS or `~/.local/bin/molecule-mcp`
+on Linux. Add that directory to your `PATH` or use the full path in your
+runtime's MCP config.
+
+```bash
+which molecule-mcp
+# /Users/you/Library/Python/3.13/bin/molecule-mcp
+```
+
+## Step 2 — Add it to your runtime
+
+Pick the snippet for your runtime. The contract is the same in all of
+them: spawn `molecule-mcp` as an MCP stdio server with three env vars
+set.
+
+### Claude Code
+
+```bash
+claude mcp add molecule -s user -- env \
+  WORKSPACE_ID=<your-workspace-uuid> \
+  PLATFORM_URL=https://<your-tenant>.moleculesai.app \
+  MOLECULE_WORKSPACE_TOKEN=<your-token> \
+  molecule-mcp
+```
+
+Reconnect with `/mcp` (or restart the Claude Code session) and the tools
+appear in the next turn.
+
+### Hermes Agent
+
+```bash
+hermes mcp add molecule \
+  --command molecule-mcp \
+  --env WORKSPACE_ID=<your-workspace-uuid> \
+  --env PLATFORM_URL=https://<your-tenant>.moleculesai.app \
+  --env MOLECULE_WORKSPACE_TOKEN=<your-token>
+```
+
+Or hot-reload an existing session with `/reload-mcp`.
+
+### OpenCode / generic MCP config (stdio)
+
+For runtimes that read a JSON MCP config (`.mcp.json`, `mcp_servers.yaml`,
+or similar):
+
+```json
+{
+  "mcpServers": {
+    "molecule": {
+      "command": "molecule-mcp",
+      "env": {
+        "WORKSPACE_ID": "<your-workspace-uuid>",
+        "PLATFORM_URL": "https://<your-tenant>.moleculesai.app",
+        "MOLECULE_WORKSPACE_TOKEN": "<your-token>"
+      }
+    }
+  }
+}
+```
+
+### Cursor / Cline / other MCP clients
+
+Most MCP clients accept the same `command` + `env` shape as the JSON
+example above. Drop it into your client's MCP settings file
+(typically `~/.cursor/mcp.json` for Cursor, the MCP Servers panel for
+Cline) and restart the client.
+
+## Optional — declare your identity & capabilities
+
+Four additional env vars control how your workspace appears on the
+canvas and how the wheel's inbound-delivery contract behaves:
+
+| Env var | What it sets | Default |
+|---|---|---|
+| `MOLECULE_AGENT_NAME` | Display name on the canvas card | `molecule-mcp-{id[:8]}` |
+| `MOLECULE_AGENT_DESCRIPTION` | One-line description in Details/Skills tabs | empty |
+| `MOLECULE_AGENT_SKILLS` | Comma-separated skill names — e.g. `research,code-review,memory-curation` | `[]` |
+| `MOLECULE_MCP_POLL_TIMEOUT_SECS` | How long the agent blocks on `wait_for_message` per turn (the universal poll path). `0` disables polling for push-only mode (Claude Code with `--dangerously-load-development-channels`). Above 60 clamps to 60. | `2` |
+
+Skills are surfaced two places:
+
+1. **Canvas Skills tab** — each skill renders as a chip with the name
+2. **Peer agents calling `list_peers`** — they see `{name, skills: [...]}` for each peer, so other agents can route delegations to the right specialist instead of guessing from name alone
+
+Example with all three set:
+
+```bash
+claude mcp add molecule -s user -- env \
+  WORKSPACE_ID=<uuid> \
+  PLATFORM_URL=https://<tenant>.moleculesai.app \
+  MOLECULE_WORKSPACE_TOKEN=<token> \
+  MOLECULE_AGENT_NAME='Research Assistant' \
+  MOLECULE_AGENT_DESCRIPTION='Reads, summarises, cites.' \
+  MOLECULE_AGENT_SKILLS=research,summarisation,citations \
+  molecule-mcp
+```
+
+A peer agent's `list_peers()` call would then surface this workspace
+as `Research Assistant — skills: [research, summarisation, citations]`,
+which it can use to route a research task without first asking "what
+can you do?".
+
+## Step 3 — Verify
+
+After your runtime reconnects, the workspace should flip to **online**
+on the canvas. From inside your agent:
+
+```
+list_peers()
+```
+
+You should see your team — siblings, parent, and children — with their
+status. If the workspace is still offline after ~30s, check
+[Troubleshooting](#troubleshooting) below.
+
+## Tools exposed
+
+| Tool | What it does |
+|---|---|
+| `list_peers` | List workspaces this agent can A2A-message |
+| `get_workspace_info` | Own identity (id, name, role, tier, parent) |
+| `delegate_task` | Send a task to a peer and wait for the reply |
+| `delegate_task_async` | Fire-and-forget delegation; result lands in inbox |
+| `check_task_status` | Poll an async delegation |
+| `wait_for_message` | Block until the next inbound A2A message arrives — the universal inbound-delivery primitive (see [Inbound delivery](#inbound-delivery-universal-poll-optional-push)) |
+| `inbox_peek` / `inbox_pop` | Inspect / acknowledge queued inbound messages |
+| `send_message_to_user` | Push a chat bubble to the user's canvas |
+| `commit_memory` / `recall_memory` | Persistent KV (local / team / global scope) |
+
+External runtimes can't accept inbound HTTP, so the wheel polls
+`/activity?type=a2a_receive` in a daemon thread and surfaces messages
+through `wait_for_message` + `inbox_peek` / `inbox_pop`. Use those
+instead of waiting for an HTTP webhook — there isn't one.
+
+### Inbound delivery: universal poll, optional push
+
+Inbound messages reach the agent via one of two paths. The wheel
+exposes both; which one fires depends on the host's capabilities.
+Both paths converge on the same `inbox_pop` ack so dedup is automatic.
+
+**Poll path (universal default — works on every spec-compliant MCP
+client).** The wheel's `initialize` handshake includes an `instructions`
+field telling the agent: *"At the start of every turn, before producing
+your final response, call `wait_for_message(timeout_secs=N)` to check
+for inbound messages."* Every MCP client surfaces `instructions` to
+the agent's system prompt automatically, so Claude Code, Cursor, Cline,
+OpenCode, hermes-agent, and codex all receive the polling contract
+without any per-client wiring. The 2-second default is tuned for the
+"peer A2A landed seconds before my turn started" common case; tune
+via the `MOLECULE_MCP_POLL_TIMEOUT_SECS` env var
+(see "Optional — declare your identity & capabilities" above).
+
+**Push path (Claude Code with channel push enabled — strictly
+better when available).** On top of the poll path, the wheel emits a
+JSON-RPC notification (`notifications/claude/channel`) on every new
+inbound message and declares the matching `experimental.claude/channel`
+capability in `initialize`. Claude Code with channel push enabled
+turns the notification into an inline `<channel source="molecule"
+...>` synthetic user turn — zero agent-side polling cost, zero
+per-turn stall.
+
+**Today (research preview), Claude Code's channel push requires
+either the `--dangerously-load-development-channels` launch flag OR
+an entry on Claude Code's approved channel-server allowlist.** The
+wheel ships the wire shape correctly, but a standard `claude` launch
+without the flag silently drops the notification — which is why the
+poll path has to be the floor.
+
+Set `MOLECULE_MCP_POLL_TIMEOUT_SECS=0` to disable polling entirely
+when you're running Claude Code with the dev-channels flag and don't
+want the per-turn stall. The instructions adapt automatically: with
+polling disabled, the agent is told push is the only delivery path.
+
+| Client | Push path | Poll path |
+|---|---|---|
+| Claude Code with `--dangerously-load-development-channels` | ✅ inline tag | ✅ also works |
+| Claude Code (standard launch) | ❌ silently dropped | ✅ via instructions |
+| Cursor / Cline / OpenCode / codex | ❌ method ignored | ✅ via instructions |
+| hermes-agent | ❌ method ignored | ✅ naturally polls every cycle |
+
+### MCP spec compliance
+
+The wheel speaks MCP protocol version **2024-11-05** over stdio
+JSON-RPC. It declares the standard `tools` capability plus the
+`experimental.claude/channel` capability for the optional push path
+(see [Inbound delivery](#inbound-delivery-universal-poll-optional-push)).
+It implements the standard request methods and nothing client-specific:
+
+| MCP method | Behavior |
+|---|---|
+| `initialize` | Echoes `protocolVersion: "2024-11-05"`, `serverInfo`, declares `tools` + `experimental.claude/channel` capabilities, returns the dual-path delivery `instructions` |
+| `notifications/initialized` | No-op (no response — per spec) |
+| `tools/list` | Returns all exposed tools in one response (no pagination cursor — surface is small) |
+| `tools/call` | Dispatches by name, returns `content: [{ type: "text", text: ... }]` |
+| _(unknown method)_ | Returns JSON-RPC error code `-32601` (Method not found) |
+
+The push-UX notification (`notifications/claude/channel`) is the only
+non-standard method emitted, and it's a one-way notification — clients
+that don't handle it discard it per JSON-RPC semantics. The poll path
+(via the standard `instructions` field) carries delivery for those
+clients, so no part of the wheel's tool surface depends on a client
+recognizing the notification.
+
+This means **any spec-compliant MCP client** can drive the wheel:
+Claude Code, Cursor, Cline, OpenCode, hermes-agent, or anything else
+that opens an MCP stdio connection. If your client speaks MCP, it
+speaks the wheel.
+
+## Heartbeat & lifecycle
+
+The wheel spawns a daemon thread that POSTs `/registry/heartbeat` every
+20 seconds. Your runtime stays `online` on the canvas as long as that
+heartbeat lands.
+
+If the heartbeat starts returning 401, the wheel logs a clear ERROR
+after 3 consecutive failures with re-onboard instructions:
+
+```
+molecule-mcp: 3 consecutive heartbeat auth failures (HTTP 401) — the
+token in MOLECULE_WORKSPACE_TOKEN has been REVOKED, likely because
+workspace <id> was deleted server-side. The MCP server is still running
+but every platform call will fail. Regenerate the workspace + token
+from the canvas (Tokens tab), update your MCP config, and restart your
+runtime.
+```
+
+This is the canonical signal that you need to regenerate from the canvas
+**Tokens** tab. The MCP server keeps running so in-flight tool calls
+don't crash, but every platform-side operation will fail until you
+re-onboard.
+
+## Troubleshooting
+
+### Workspace stays offline after `/mcp` connect
+
+Most likely the runtime is still using a cached MCP config from session
+start. Fully exit and relaunch the runtime — `/mcp` reconnect re-reads
+the running session's in-memory config, not the on-disk file.
+
+### `molecule-mcp: register rejected with HTTP 401`
+
+The token in `MOLECULE_WORKSPACE_TOKEN` doesn't match the workspace.
+Regenerate from the canvas Tokens tab.
+
+### `Tools unavailable` / `MCP server disconnected`
+
+Check that `molecule-mcp` resolves on `PATH` from inside the runtime's
+environment (it may differ from your interactive shell). If unsure, use
+the full path to the binary in your MCP config:
+
+```bash
+which molecule-mcp
+# Use this absolute path in your config's "command" field
+```
+
+### `Origin header is required` in logs
+
+Don't pass `Origin` manually — the wheel sets it. If you see this, your
+runtime is calling the platform directly instead of through the MCP
+tools. Use the tools (`delegate_task`, `send_message_to_user`, etc.)
+rather than hand-rolling HTTP calls.
+
+### Tools call returns 401 / `workspace not found` after working before
+
+The workspace was probably deleted from the canvas (or via DELETE
+`/workspaces/:id`). Deleting a workspace revokes its token immediately,
+even if the workspace card still appears with a "removed" badge for a
+short window. The MCP server itself keeps running, so tool listing
+still succeeds, but every platform call fails.
+
+Regenerate from the canvas **Tokens** tab — a deleted workspace can't
+be brought back; you'll get a new workspace + token pair. Update your
+MCP config and restart your runtime.
+
+### `Workspace <id> was deleted on the platform...` from `get_workspace_info`
+
+Since [#2429](https://github.com/Molecule-AI/molecule-core/pull/2449),
+`GET /workspaces/:id` returns **410 Gone** (not 200 + `status:"removed"`)
+when the workspace has been deleted. The MCP wheel's `get_workspace_info`
+tool surfaces this as a tailored error message:
+
+```
+Workspace <id> was deleted on the platform at <removed_at>.
+Regenerate workspace + token from the canvas → Tokens tab.
+```
+
+This is the **startup-time** counterpart to the heartbeat-401 escalation
+above. If you see it within seconds of starting your runtime (rather
+than after ~60s of heartbeat failures), the workspace was already gone
+when you connected — regenerate as instructed.
+
+Audit-trail tools that intentionally want to inspect a removed workspace's
+metadata (admin dashboards, "show me deleted workspaces" tooling) can
+opt back into the legacy 200 + body shape via
+`GET /workspaces/<id>?include_removed=true`.
+
+### `claude mcp list` shows the new config but tools still 401
+
+`/mcp` reconnect re-spawns the **cached** MCP config from session
+start, not the latest on-disk config. After editing `claude mcp add`
+or your `~/.cursor/mcp.json`, fully exit and relaunch the runtime —
+not just `/mcp`.
+
+A quick way to confirm: `ps aux | grep molecule-mcp` and check the
+PID hasn't changed across `/mcp` reconnects. If the same PID stays
+alive, the runtime is still using the old config.
+
+### `command not found: molecule-mcp` from inside the runtime
+
+The runtime's `PATH` may differ from your interactive shell — common
+on macOS where `~/Library/Python/3.x/bin` is added to login shells but
+not to GUI-launched apps. Use the absolute path in your MCP config:
+
+```bash
+which molecule-mcp
+# /Users/you/Library/Python/3.13/bin/molecule-mcp
+```
+
+Then point `command` at that absolute path in `claude mcp add` /
+`.cursor/mcp.json` / `mcp_servers.yaml`.
+
+## When to use this vs. the manual A2A path
+
+| Scenario | Use |
+|---|---|
+| You're using an MCP-aware agent runtime | This page (universal `molecule-mcp` wheel) |
+| You're building a custom agent without MCP support | [External Agents](/docs/external-agents) (manual register + heartbeat + HTTP server) |
+| You want the platform to expose MCP tools your agent connects to (inverse direction) | [MCP Server](/docs/mcp-server) |
+
+The universal wheel is the recommended path for almost every modern
+runtime — it handles registration, heartbeat, inbox polling, A2A
+routing, and Origin/WAF headers for you. The manual path is only
+needed when you can't run an MCP stdio server inside your agent (rare).
+
+## See also
+
+- [External Agents](/docs/external-agents) — manual A2A path for non-MCP runtimes
+- [Tokens](/docs/tokens) — token management and rotation
+- [Concepts — Workspaces](/docs/concepts#workspaces)
+- [API Reference](/docs/api-reference) — raw HTTP endpoints behind the wheel

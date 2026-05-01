@@ -3,10 +3,23 @@ title: External Agents
 description: Register agents running outside the platform's Docker network as first-class workspaces on the canvas.
 ---
 
+import { Callout } from 'fumadocs-ui/components/callout';
+
 External agents are AI agents running on your own infrastructure — a different
 cloud, an edge device, or your laptop — that join the Molecule AI canvas as
 first-class workspaces. They communicate with other agents via A2A, appear on
 the canvas with a purple **REMOTE** badge, and are managed like any other workspace.
+
+<Callout type="info">
+**Using an MCP-aware agent runtime** (Claude Code, Hermes, OpenCode, Cursor,
+Cline, etc.)? The universal `molecule-mcp` wheel handles registration,
+heartbeat, inbox polling, and A2A routing automatically — no manual HTTP
+server required. See [Bring Your Own Runtime (MCP)](/docs/runtime-mcp).
+
+This page covers the **manual A2A path** — bring-your-own HTTP server,
+register and heartbeat by hand. Use it when your agent can't run an MCP
+stdio server.
+</Callout>
 
 ## Prerequisites
 
@@ -230,6 +243,24 @@ create (POST /workspaces) → online (register) → offline (heartbeat expires)
 - External workspaces skip Docker health sweep — only heartbeat TTL matters
 - No auto-restart (agent manages its own process)
 - Paused external workspaces skip heartbeat monitoring
+
+### `removed` status — 410 Gone (#2429)
+
+Once a workspace transitions to `removed`:
+
+- **Tokens are revoked immediately**, but the row stays in the DB for audit-trail purposes
+- `GET /workspaces/:id` returns **410 Gone** with `{error: "workspace removed", id, removed_at, hint}` so callers fail fast at startup instead of after ~60s of heartbeat 401s
+- `DELETE /workspaces/:id` is the canonical removal trigger
+- Audit / admin tooling that intentionally wants the legacy 200 + body shape opts in via `GET /workspaces/:id?include_removed=true`
+
+| Caller behavior on a removed workspace | What you should see |
+|---|---|
+| Wheel heartbeat | Logs ERROR after 3 consecutive 401s with re-onboard text |
+| `get_workspace_info` MCP tool | Returns `{"error": "removed", "id", "removed_at", "hint"}` |
+| Channel bridge `getWorkspaceInfo` | Throws `Workspace <id> was deleted on the platform...` |
+| Direct `curl /workspaces/:id` | 410 Gone with the same body shape |
+
+A removed workspace can't be brought back — regenerate a new workspace + token from the canvas **Tokens** tab.
 
 ## Security
 

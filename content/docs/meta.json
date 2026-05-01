@@ -11,6 +11,7 @@
     "plugins",
     "channels",
     "schedules",
+    "runtime-mcp",
     "external-agents",
     "tokens",
     "api-reference",

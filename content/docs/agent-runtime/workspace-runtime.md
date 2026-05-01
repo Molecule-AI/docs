@@ -73,6 +73,72 @@ At a high level, `workspace/main.py` does this:
 10. Start the skill watcher when skills are configured.
 11. Serve the A2A app through Uvicorn.
 
+## Boot-Smoke Contract (`MOLECULE_SMOKE_MODE`)
+
+The image-publish CI pipeline runs each template's image with `MOLECULE_SMOKE_MODE=1` to exercise lazy imports inside `executor.execute()` against stub credentials and no network. The runtime detects the env var, invokes `executor.execute()` once with a stubbed `RequestContext` and a short timeout, then exits — registration, heartbeats, and the A2A server are skipped.
+
+This catches lazy imports that pure `python3 -c "import adapter"` smokes miss: imports nested inside `if`-branches, deferred until first call, or behind `importlib.import_module()`.
+
+### What adapter authors need to do
+
+**Most adapters need to do nothing.** If `setup()` only writes files, parses config, or instantiates Python objects, the smoke gate just works.
+
+**Adapters whose `setup()` does real I/O must opt out of that I/O under smoke mode.** This applies to:
+
+- spawning subprocesses that require valid credentials (e.g. a gateway daemon)
+- making real network calls
+- writing to filesystem locations that need a specific uid/gid the smoke harness can't guarantee
+
+The contract:
+
+```python
+async def setup(self, config: AdapterConfig) -> None:
+    if os.environ.get("MOLECULE_SMOKE_MODE") == "1":
+        return  # skip real I/O; runtime's smoke short-circuit handles the rest
+    # ... real setup ...
+```
+
+For shell entrypoints that wrap `molecule-runtime`:
+
+```bash
+if [ "${MOLECULE_SMOKE_MODE:-0}" = "1" ]; then
+  exec molecule-runtime
+fi
+```
+
+### What gets exercised under smoke mode
+
+- All `/app/*.py` modules import cleanly (covered by a separate static-import smoke step)
+- `adapter.setup()` runs (with the opt-out above for I/O-heavy adapters)
+- `adapter.create_executor()` runs
+- `executor.execute()` is invoked once against a stub `RequestContext`/`EventQueue` with `MOLECULE_SMOKE_TIMEOUT_SECS` (default 5s); a clean timeout exits 0, an import error exits non-zero
+
+### What the gate does NOT prove
+
+A green gate means **"imports are healthy enough that `executor.execute()` reaches its body"** — that's the regression class the gate exists to catch (lazy `from x import y` inside an `if`-branch, or `importlib.import_module()` on a path that breaks after a wheel bump).
+
+It does **not** prove that `execute()` produces the right output for real input. The harness reports PASS in three distinct cases:
+
+1. **Clean return** — execute() ran to completion within the timeout.
+2. **Timeout** — execute() was still running when the timer fired (typical for adapters that do real I/O inside execute(): subprocess to a gateway, httpx call to an upstream LLM).
+3. **Any non-import exception** — execute() raised `RuntimeError`, auth errors, validation errors, etc. The harness only fails on `ImportError`/`ModuleNotFoundError`.
+
+The stub `RequestContext` carries a non-empty `"smoke test"` text message (so adapters relying on `extract_message_text(ctx)` returning input still work), and the harness never drains the `EventQueue` — what `execute()` writes back is ignored.
+
+If you need correctness coverage, write a separate integration test that runs the workspace against real or mocked infrastructure — the smoke gate is a strict subset.
+
+### Stub env the smoke harness sets
+
+| Var | Value |
+|---|---|
+| `MOLECULE_SMOKE_MODE` | `1` |
+| `MOLECULE_SMOKE_TIMEOUT_SECS` | `10` (CI default) |
+| `WORKSPACE_ID` | `fake-smoke` |
+| `PYTHONPATH` | `/app` (mirrors the platform provisioner) |
+| `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` | `sk-fake-smoke-*` |
+
+A `config.yaml` from the template repo's root is mounted at `/configs/config.yaml`.
+
 ## Core Runtime Pieces
 
 | File | Responsibility |

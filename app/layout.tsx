@@ -1,10 +1,16 @@
 import './global.css';
 import { RootProvider } from 'fumadocs-ui/provider/next';
-import { Inter } from 'next/font/google';
+import { Geist, JetBrains_Mono } from 'next/font/google';
 import type { ReactNode } from 'react';
 
-const inter = Inter({
+const geist = Geist({
   subsets: ['latin'],
+  variable: '--font-geist',
+});
+
+const jetbrains = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
 });
 
 export const metadata = {
@@ -19,8 +25,12 @@ export const metadata = {
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={inter.className} suppressHydrationWarning>
-      <body className="flex flex-col min-h-screen">
+    <html
+      lang="en"
+      className={`${geist.variable} ${jetbrains.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="flex flex-col min-h-screen font-sans">
         <RootProvider>{children}</RootProvider>
       </body>
     </html>

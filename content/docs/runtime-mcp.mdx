@@ -102,6 +102,40 @@ example above. Drop it into your client's MCP settings file
 (typically `~/.cursor/mcp.json` for Cursor, the MCP Servers panel for
 Cline) and restart the client.
 
+## Optional — declare your identity & capabilities
+
+Three additional env vars control how your workspace appears on the
+canvas and to peer agents calling `list_peers`:
+
+| Env var | What it sets | Default |
+|---|---|---|
+| `MOLECULE_AGENT_NAME` | Display name on the canvas card | `molecule-mcp-{id[:8]}` |
+| `MOLECULE_AGENT_DESCRIPTION` | One-line description in Details/Skills tabs | empty |
+| `MOLECULE_AGENT_SKILLS` | Comma-separated skill names — e.g. `research,code-review,memory-curation` | `[]` |
+
+Skills are surfaced two places:
+
+1. **Canvas Skills tab** — each skill renders as a chip with the name
+2. **Peer agents calling `list_peers`** — they see `{name, skills: [...]}` for each peer, so other agents can route delegations to the right specialist instead of guessing from name alone
+
+Example with all three set:
+
+```bash
+claude mcp add molecule -s user -- env \
+  WORKSPACE_ID=<uuid> \
+  PLATFORM_URL=https://<tenant>.moleculesai.app \
+  MOLECULE_WORKSPACE_TOKEN=<token> \
+  MOLECULE_AGENT_NAME='Research Assistant' \
+  MOLECULE_AGENT_DESCRIPTION='Reads, summarises, cites.' \
+  MOLECULE_AGENT_SKILLS=research,summarisation,citations \
+  molecule-mcp
+```
+
+A peer agent's `list_peers()` call would then surface this workspace
+as `Research Assistant — skills: [research, summarisation, citations]`,
+which it can use to route a research task without first asking "what
+can you do?".
+
 ## Step 3 — Verify
 
 After your runtime reconnects, the workspace should flip to **online**

@@ -227,6 +227,50 @@ when you're running Claude Code with the dev-channels flag and don't
 want the per-turn stall. The instructions adapt automatically: with
 polling disabled, the agent is told push is the only delivery path.
 
+#### `<channel>` envelope attributes
+
+Every inbound message — push or poll — carries the same metadata
+shape. On the push path, attributes render inline as XML-style attrs
+on the `<channel>` tag; on the poll path, the same fields appear in
+the JSON returned by `inbox_peek` / `wait_for_message`. Either way,
+the agent sees a consistent view.
+
+| Attribute | When present | Description |
+|---|---|---|
+| `source` | always | Always `molecule` — distinguishes our channel from other registered servers (`telegram`, etc.). |
+| `kind` | always | `canvas_user` (a human in the canvas chat) or `peer_agent` (another workspace's agent). Drives reply routing. |
+| `peer_id` | always | Empty for `canvas_user`; the sender's workspace UUID for `peer_agent`. Use as `workspace_id` when calling `delegate_task` to reply. |
+| `peer_name` | `peer_agent` only | The peer's display name (e.g. `ops-agent`) resolved from the platform registry. Absent on registry-lookup failure — the push still delivers. |
+| `peer_role` | `peer_agent` only | The peer's declared role (e.g. `sre`, `coordinator`). Same registry source as `peer_name`; same graceful-degrade rule. |
+| `agent_card_url` | `peer_agent` only | URL of the platform's discover endpoint for this peer. Fetch it if you need the peer's full capability list (skills, runtime, etc.). |
+| `activity_id` | always | The inbox row ID. **Pass it to `inbox_pop` after handling** so the message isn't re-delivered on the next push or poll cycle. |
+| `ts` | always | ISO-8601 timestamp of when the message landed in the platform's activity log. |
+
+`peer_name` and `peer_role` are added by the wheel via a TTL'd
+registry lookup keyed on `peer_id`. Cache TTL is 5 minutes — long
+enough that a busy multi-peer chat doesn't hit the registry on every
+push, short enough that role/name renames propagate within a single
+agent session. Lookup failure is silent: the attributes are simply
+absent and the push delivers anyway, so a registry stall can never
+block inbound messages.
+
+`agent_card_url` is constructed deterministically from `peer_id`, so
+it's present even if the registry is down. The agent can hit it
+later to enumerate the sender's capabilities once the registry is
+back up.
+
+Worked push example for a `peer_agent` arrival:
+
+```
+<channel source="molecule" kind="peer_agent"
+         peer_id="11111111-2222-3333-4444-555555555555"
+         peer_name="ops-agent" peer_role="sre"
+         agent_card_url="https://platform.example.com/registry/discover/11111111-2222-3333-4444-555555555555"
+         activity_id="act-742" ts="2026-05-01T12:34:56Z">
+  Can you check the deploy status for the canary?
+</channel>
+```
+
 | Client | Push path | Poll path |
 |---|---|---|
 | Claude Code with `--dangerously-load-development-channels server:molecule` | ✅ inline `← molecule:` tag | ✅ also works |

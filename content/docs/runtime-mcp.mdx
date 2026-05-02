@@ -52,13 +52,53 @@ set.
 
 ### Claude Code
 
+Two equivalent paths — pick whichever your version supports.
+
+**CLI (Claude Code 2.1+):** pass each env var with `-e`, scope with
+`-s user` so the server is available in every project, and put the
+command after `--`:
+
 ```bash
-claude mcp add molecule -s user -- env \
-  WORKSPACE_ID=<your-workspace-uuid> \
-  PLATFORM_URL=https://<your-tenant>.moleculesai.app \
-  MOLECULE_WORKSPACE_TOKEN=<your-token> \
-  molecule-mcp
+claude mcp add molecule -s user \
+  -e WORKSPACE_ID=<your-workspace-uuid> \
+  -e PLATFORM_URL=https://<your-tenant>.moleculesai.app \
+  -e MOLECULE_WORKSPACE_TOKEN=<your-token> \
+  -- molecule-mcp
 ```
+
+<Callout type="info">
+Older docs used a `-- env VAR=val ... molecule-mcp` shell trick (with
+`env` as the command). It still works but produces a less idiomatic
+`~/.claude.json` entry and trips up the post-2.1 flag parser if you
+forget the `--`. Prefer the `-e` form above.
+</Callout>
+
+**Direct edit of `~/.claude.json`:** add the entry under the **top-level
+`mcpServers` key** (this is the user-scope location — available in
+every project). If you'd rather scope it to a single project, use a
+`.mcp.json` file in that project's root with the same `mcpServers`
+shape.
+
+```json
+{
+  "mcpServers": {
+    "molecule": {
+      "type": "stdio",
+      "command": "molecule-mcp",
+      "args": [],
+      "env": {
+        "WORKSPACE_ID": "<your-workspace-uuid>",
+        "PLATFORM_URL": "https://<your-tenant>.moleculesai.app",
+        "MOLECULE_WORKSPACE_TOKEN": "<your-token>"
+      }
+    }
+  }
+}
+```
+
+If `molecule-mcp` isn't on the PATH that Claude Code sees (common on
+macOS — see [Troubleshooting](#command-not-found-molecule-mcp-from-inside-the-runtime)),
+replace `"command": "molecule-mcp"` with the absolute path from `which molecule-mcp`.
 
 Reconnect with `/mcp` (or restart the Claude Code session) and the tools
 appear in the next turn.
@@ -119,17 +159,38 @@ Skills are surfaced two places:
 1. **Canvas Skills tab** — each skill renders as a chip with the name
 2. **Peer agents calling `list_peers`** — they see `{name, skills: [...]}` for each peer, so other agents can route delegations to the right specialist instead of guessing from name alone
 
-Example with all three set:
+Example with all three set (Claude Code 2.1+ CLI form):
 
 ```bash
-claude mcp add molecule -s user -- env \
-  WORKSPACE_ID=<uuid> \
-  PLATFORM_URL=https://<tenant>.moleculesai.app \
-  MOLECULE_WORKSPACE_TOKEN=<token> \
-  MOLECULE_AGENT_NAME='Research Assistant' \
-  MOLECULE_AGENT_DESCRIPTION='Reads, summarises, cites.' \
-  MOLECULE_AGENT_SKILLS=research,summarisation,citations \
-  molecule-mcp
+claude mcp add molecule -s user \
+  -e WORKSPACE_ID=<uuid> \
+  -e PLATFORM_URL=https://<tenant>.moleculesai.app \
+  -e MOLECULE_WORKSPACE_TOKEN=<token> \
+  -e MOLECULE_AGENT_NAME='Research Assistant' \
+  -e MOLECULE_AGENT_DESCRIPTION='Reads, summarises, cites.' \
+  -e MOLECULE_AGENT_SKILLS=research,summarisation,citations \
+  -- molecule-mcp
+```
+
+Or as the equivalent `~/.claude.json` entry:
+
+```json
+{
+  "mcpServers": {
+    "molecule": {
+      "type": "stdio",
+      "command": "molecule-mcp",
+      "env": {
+        "WORKSPACE_ID": "<uuid>",
+        "PLATFORM_URL": "https://<tenant>.moleculesai.app",
+        "MOLECULE_WORKSPACE_TOKEN": "<token>",
+        "MOLECULE_AGENT_NAME": "Research Assistant",
+        "MOLECULE_AGENT_DESCRIPTION": "Reads, summarises, cites.",
+        "MOLECULE_AGENT_SKILLS": "research,summarisation,citations"
+      }
+    }
+  }
+}
 ```
 
 A peer agent's `list_peers()` call would then surface this workspace
@@ -206,8 +267,7 @@ poll path has to be the floor.
 Since Claude Code 2.1.x the flag takes a tagged allowlist, not a bare
 switch. Pass each MCP server you want to push from as `server:<name>`
 (matching the name you registered the server under in Claude Code's
-config — `molecule` if you followed the `claude mcp add` command in
-[Install](#install)):
+config — `molecule` if you followed [Step 2](#claude-code) above):
 
 ```bash
 claude --dangerously-load-development-channels server:molecule
@@ -404,6 +464,21 @@ not just `/mcp`.
 A quick way to confirm: `ps aux | grep molecule-mcp` and check the
 PID hasn't changed across `/mcp` reconnects. If the same PID stays
 alive, the runtime is still using the old config.
+
+### `claude mcp add` rejects the install command on Claude Code 2.1+
+
+Two common shapes from older docs trip the 2.1+ parser:
+
+- `claude mcp add molecule -s user -- env VAR=val molecule-mcp` — works
+  but lands as `command: "env"` with positional args, which surprises
+  some MCP clients on older 2.1.x patch builds.
+- `claude mcp add molecule -e VAR=val molecule-mcp` (missing `--`) — the
+  CLI parses `molecule-mcp` as a flag value, not a command, and either
+  errors or silently registers nothing.
+
+Use the `-e` form **with** `--` (see [Step 2](#claude-code)), or skip the
+CLI entirely and write the JSON shape into `~/.claude.json` directly.
+The on-disk shape is the source of truth and not version-sensitive.
 
 ### `command not found: molecule-mcp` from inside the runtime
 

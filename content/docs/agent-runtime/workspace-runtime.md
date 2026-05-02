@@ -139,6 +139,28 @@ If you need correctness coverage, write a separate integration test that runs th
 
 A `config.yaml` from the template repo's root is mounted at `/configs/config.yaml`.
 
+## Runtime Distribution: PyPI Is Canonical, The Git Mirror May Lag
+
+The runtime ships as **two surfaces**, and only one of them is wire-truth.
+
+| Surface | Repo / location | Role |
+|---|---|---|
+| **PyPI wheel** | `pip install molecule-ai-workspace-runtime==X.Y.Z` | **Canonical artifact.** Workspace template images, the controlplane runtime smoke harness, and self-hosters all consume this. |
+| **Git mirror** | [`Molecule-AI/molecule-ai-workspace-runtime`](https://github.com/Molecule-AI/molecule-ai-workspace-runtime) | **Human-readable copy.** Exists for browsing + giving `mirror-guard` a concrete branch to enforce its "no direct PRs" policy against. |
+
+Both are produced by the [`publish-runtime.yml`](https://github.com/Molecule-AI/molecule-monorepo/blob/main/.github/workflows/publish-runtime.yml) workflow on every push to `molecule-monorepo/workspace/`, but **the wheel publish and the mirror push are separate steps**. The mirror push can lag the wheel by hours, or be skipped entirely on transient failures while the wheel still ships.
+
+If you're chasing "is module X in the published runtime yet?", trust the wheel listing, not the mirror's `git log`:
+
+```bash
+pip download molecule-ai-workspace-runtime==X.Y.Z --no-deps
+unzip -l molecule_ai_workspace_runtime-X.Y.Z-*.whl | grep your_module
+```
+
+To find out what version the controlplane is actually deploying, check the workspace template image's `requirements.txt` pin (it's a `>=`, so the resolved version is whatever PyPI hands back at image-build time — not whatever's in the mirror).
+
+**Do not edit the git mirror directly.** `mirror-guard` rejects all PRs to `molecule-ai-workspace-runtime`. Edit `molecule-monorepo/workspace/` and let `publish-runtime.yml` regenerate both surfaces.
+
 ## Core Runtime Pieces
 
 | File | Responsibility |

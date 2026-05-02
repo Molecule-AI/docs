@@ -161,6 +161,7 @@ status. If the workspace is still offline after ~30s, check
 | `check_task_status` | Poll an async delegation |
 | `wait_for_message` | Block until the next inbound A2A message arrives — the universal inbound-delivery primitive (see [Inbound delivery](#inbound-delivery-universal-poll-optional-push)) |
 | `inbox_peek` / `inbox_pop` | Inspect / acknowledge queued inbound messages |
+| `chat_history` | Fetch prior turns with one peer (both sides, chronological) — see [Reading prior conversation](#reading-prior-conversation) |
 | `send_message_to_user` | Push a chat bubble to the user's canvas |
 | `commit_memory` / `recall_memory` | Persistent KV (local / team / global scope) |
 
@@ -277,6 +278,54 @@ Worked push example for a `peer_agent` arrival:
 | Claude Code (standard launch) | ❌ silently dropped | ✅ via instructions |
 | Cursor / Cline / OpenCode / codex | ❌ method ignored | ✅ via instructions |
 | hermes-agent | ❌ method ignored | ✅ naturally polls every cycle |
+
+### Reading prior conversation
+
+When a `peer_agent` push lands and the agent needs context from
+prior turns with that peer ("what task did this peer assign me last
+hour?", "what did I tell them?"), `chat_history` reads directly
+from the platform's audit log without asking the agent to
+re-derive context from memory.
+
+```jsonc
+// MCP tool call
+{ "name": "chat_history",
+  "arguments": { "peer_id": "<uuid>", "limit": 20 } }
+
+// Returns JSON-encoded list of activity_logs rows in chronological
+// order — both sides of the conversation:
+[
+  { "id": "act-1", "activity_type": "a2a_send",
+    "target_id": "<peer>", "summary": "...", "created_at": "..." },
+  { "id": "act-2", "activity_type": "a2a_receive",
+    "source_id": "<peer>", "summary": "...", "created_at": "..." },
+  ...
+]
+```
+
+Parameters:
+
+- `peer_id` (required) — the peer workspace's UUID. Same value the
+  agent sees as `peer_id` on a `peer_agent` push, or as
+  `workspace_id` from `list_peers`.
+- `limit` (default `20`, capped server-side at `500`) — most recent
+  rows. The default covers "context for this peer" without flooding
+  the conversation window.
+- `before_ts` (optional, RFC3339) — page backward through long
+  histories by passing the oldest `created_at` from a previous
+  response.
+
+The server returns `400` for malformed `peer_id` (UUID validation
+at the trust boundary); the wheel surfaces the error verbatim so
+the agent can self-correct. Network/5xx failures return an
+`Error:`-prefixed string instead of crashing the MCP server, so
+agents can branch on the prefix and degrade to memory-based
+recall.
+
+`chat_history` pairs naturally with the `agent_card_url` envelope
+attribute: when you also need the peer's full capability list (not
+just chat context), fetch the URL from the inbound push and let
+`chat_history` cover the conversation side.
 
 ### MCP spec compliance
 

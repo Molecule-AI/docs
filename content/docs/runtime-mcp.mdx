@@ -112,7 +112,7 @@ canvas and how the wheel's inbound-delivery contract behaves:
 | `MOLECULE_AGENT_NAME` | Display name on the canvas card | `molecule-mcp-{id[:8]}` |
 | `MOLECULE_AGENT_DESCRIPTION` | One-line description in Details/Skills tabs | empty |
 | `MOLECULE_AGENT_SKILLS` | Comma-separated skill names — e.g. `research,code-review,memory-curation` | `[]` |
-| `MOLECULE_MCP_POLL_TIMEOUT_SECS` | How long the agent blocks on `wait_for_message` per turn (the universal poll path). `0` disables polling for push-only mode (Claude Code with `--dangerously-load-development-channels`). Above 60 clamps to 60. | `2` |
+| `MOLECULE_MCP_POLL_TIMEOUT_SECS` | How long the agent blocks on `wait_for_message` per turn (the universal poll path). `0` disables polling for push-only mode (Claude Code launched with `--dangerously-load-development-channels server:molecule`). Above 60 clamps to 60. | `2` |
 
 Skills are surfaced two places:
 
@@ -203,6 +203,25 @@ wheel ships the wire shape correctly, but a standard `claude` launch
 without the flag silently drops the notification — which is why the
 poll path has to be the floor.
 
+Since Claude Code 2.1.x the flag takes a tagged allowlist, not a bare
+switch. Pass each MCP server you want to push from as `server:<name>`
+(matching the name you registered the server under in Claude Code's
+config — `molecule` if you followed the `claude mcp add` command in
+[Install](#install)):
+
+```bash
+claude --dangerously-load-development-channels server:molecule
+```
+
+Multiple entries are space-separated:
+`server:molecule server:telegram`. A bare
+`--dangerously-load-development-channels` (no value) is rejected with
+`argument missing`; an untagged value (`molecule`) is rejected with
+`entries must be tagged`. Easy way to confirm push is live: the
+session header prints `Listening for channel messages from:
+server:molecule`, and inbound canvas messages render inline as
+`← molecule: <text>` instead of arriving via `inbox_peek`.
+
 Set `MOLECULE_MCP_POLL_TIMEOUT_SECS=0` to disable polling entirely
 when you're running Claude Code with the dev-channels flag and don't
 want the per-turn stall. The instructions adapt automatically: with
@@ -210,7 +229,7 @@ polling disabled, the agent is told push is the only delivery path.
 
 | Client | Push path | Poll path |
 |---|---|---|
-| Claude Code with `--dangerously-load-development-channels` | ✅ inline tag | ✅ also works |
+| Claude Code with `--dangerously-load-development-channels server:molecule` | ✅ inline `← molecule:` tag | ✅ also works |
 | Claude Code (standard launch) | ❌ silently dropped | ✅ via instructions |
 | Cursor / Cline / OpenCode / codex | ❌ method ignored | ✅ via instructions |
 | hermes-agent | ❌ method ignored | ✅ naturally polls every cycle |
@@ -355,6 +374,44 @@ which molecule-mcp
 
 Then point `command` at that absolute path in `claude mcp add` /
 `.cursor/mcp.json` / `mcp_servers.yaml`.
+
+### `error: option '--dangerously-load-development-channels <servers...>' argument missing`
+
+You're on Claude Code 2.1.x or later. The flag changed from a bare
+switch to an allowlist that takes tagged entries. See
+[Inbound delivery](#inbound-delivery-universal-poll-optional-push) for
+the right form — short answer:
+
+```bash
+claude --dangerously-load-development-channels server:molecule
+```
+
+### `--dangerously-load-development-channels entries must be tagged: molecule`
+
+The flag value needs the `server:` (or `plugin:`) prefix. Pass
+`server:molecule` (the registered MCP server name), not bare
+`molecule`.
+
+### `Control request timeout: initialize` from the workspace agent
+
+This is the symptom of forwarding the dev-channels flag to a nested
+`claude` CLI through the `claude-agent-sdk` with the wrong shape. If
+you embed the wheel inside an SDK-driven agent (e.g. the claude-code
+workspace template's `claude_sdk_executor.py`), pass the tagged value
+through `extra_args`:
+
+```python
+ClaudeAgentOptions(
+    ...,
+    extra_args={"dangerously-load-development-channels": "server:molecule"},
+)
+```
+
+The SDK forwards `extra_args` keys as `--<key> <value>` to the spawned
+CLI. Passing `None` renders as a bare switch and the post-2.1.x CLI
+rejects it with `argument missing`, which surfaces upstream as
+`Control request timeout: initialize` (the SDK never gets a response
+to its initialize control message).
 
 ## When to use this vs. the manual A2A path
 

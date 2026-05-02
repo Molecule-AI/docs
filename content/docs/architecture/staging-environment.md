@@ -27,7 +27,8 @@ CP (Railway):       staging service                 production service
                     staging.api.moleculesai.app     api.moleculesai.app
 
 Tenant EC2s:        staging EC2 instances            production EC2 instances
-                    *.staging.moleculesai.app        *.moleculesai.app
+                    <slug>.staging.moleculesai.app   <slug>.moleculesai.app
+                    (per-tenant CNAME, no wildcard)  (per-tenant CNAME, no wildcard)
 
 App (Vercel):       staging.app.moleculesai.app     app.moleculesai.app
                     (Vercel preview)                 (Vercel production)
@@ -38,8 +39,10 @@ DB (Neon):          staging branch                   main branch
 Docker images:      platform-tenant:staging          platform-tenant:latest
                     (GHCR)                           (GHCR)
 
-Cloudflare:         *.staging.moleculesai.app        *.moleculesai.app
-                    (separate tunnel/worker)         (tunnel per tenant)
+Cloudflare:         per-tenant CNAMEs under          per-tenant CNAMEs under
+                    staging.moleculesai.app          moleculesai.app
+                    (one CNAME + one tunnel          (one CNAME + one tunnel
+                     per provisioned tenant)          per provisioned tenant)
 ```
 
 ## Deploy flow
@@ -115,15 +118,35 @@ platform-tenant:sha-xxxxx  — immutable, pinned to specific commit
 #       pushes :latest only on manual promote
 ```
 
-### 5. Cloudflare: staging subdomain
+### 5. Cloudflare: per-tenant CNAMEs (no wildcard)
 
-Option A (simple): `*.staging.moleculesai.app` with its own tunnel/worker
-Option B (full): separate Cloudflare zone for staging (overkill)
+There is **no `*.staging.moleculesai.app` wildcard record** and there is no
+`*.moleculesai.app` wildcard either. The control plane writes a per-tenant
+CNAME at provision time, pointing `<slug>.<env-domain>` at that tenant's
+Cloudflare tunnel (`<tunnel-id>.cfargotunnel.com`).
 
-Recommend Option A:
-- Add `staging.moleculesai.app` DNS records
-- Staging tenants get `slug.staging.moleculesai.app` subdomains
-- Production tenants get `slug.moleculesai.app` (unchanged)
+Verified in `molecule-controlplane/internal/provisioner/ec2.go` — the
+provisioner calls `Tunnel.CreateTunnelDNS(ctx, slug, domain, tunnelID)`
+during workspace provision, then records a `cf_dns` row in
+`tenant_resources` with `type=CNAME` for symmetric create/delete audit.
+
+Implications for staging:
+
+- Staging tenants get `<slug>.staging.moleculesai.app` only **after** they
+  are provisioned through the staging control plane. The CNAME is
+  written as part of `Provision()`.
+- Production tenants get `<slug>.moleculesai.app` the same way, against
+  the production CP.
+- Pre-provision, an unknown slug returns **NXDOMAIN**. This is correct
+  behavior, not a regression — there is no wildcard to catch the lookup.
+- Tests that hit a staging slug they have not provisioned themselves
+  will fail with `getaddrinfo ENOTFOUND` (Node) or `Name or service not
+  known` (curl). The fix is to provision your own slug against the
+  staging CP first; do not file this as an infrastructure bug.
+
+The same model applies to both environments — the only difference is
+the parent zone (`staging.moleculesai.app` vs `moleculesai.app`) and the
+CP that writes the records.
 
 ### 6. EC2: staging tag
 

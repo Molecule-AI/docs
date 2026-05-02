@@ -264,6 +264,11 @@ wheel ships the wire shape correctly, but a standard `claude` launch
 without the flag silently drops the notification — which is why the
 poll path has to be the floor.
 
+See [Dev-channels flag — tagged-form requirement](/docs/runtime-mcp/dev-channels-flag)
+for the exact form the flag must take, the failure mode when it's
+wrong, and when operators need to set it manually vs. when the
+hosted SaaS / workspace template handles it for them.
+
 Since Claude Code 2.1.x the flag takes a tagged allowlist, not a bare
 switch. Pass each MCP server you want to push from as `server:<name>`
 (matching the name you registered the server under in Claude Code's

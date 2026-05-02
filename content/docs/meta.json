@@ -12,6 +12,7 @@
     "channels",
     "schedules",
     "runtime-mcp",
+    "runtime-mcp/dev-channels-flag",
     "external-agents",
     "tokens",
     "api-reference",

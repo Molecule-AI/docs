@@ -32,6 +32,8 @@
     "google-adk",
     "hermes",
     "---Integrations---",
-    "opencode"
+    "opencode",
+    "---Migration---",
+    "migration/a2a-sdk-v0-to-v1"
   ]
 }

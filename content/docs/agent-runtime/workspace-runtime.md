@@ -9,16 +9,18 @@ The `workspace/` directory is Molecule AI's unified runtime image. Every provisi
 
 ## Runtime Matrix In Current `main`
 
-Current `main` ships six adapters:
+Current `main` ships eight adapters:
 
-- `langgraph`
-- `deepagents`
 - `claude-code`
+- `langgraph`
 - `crewai`
 - `autogen`
+- `deepagents`
+- `hermes`
+- `gemini-cli`
 - `openclaw`
 
-This is the merged runtime surface today. Branch-level experiments such as NemoClaw are separate and should be treated as roadmap/WIP, not merged support.
+This is the merged runtime surface today. The canonical allowlist lives in `workspace-server/internal/handlers/admin_workspace_images.go` (`AllRuntimes`). Anything not on this list — including BYO runtimes — registers via the [external workspace](../external-agents.mdx) path, not as a built-in adapter.
 
 Adapter-specific behavior is documented in [Agent Runtime Adapters](./cli-runtime.md).
 

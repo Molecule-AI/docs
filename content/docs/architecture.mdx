@@ -77,7 +77,8 @@ The Platform is the central control plane responsible for:
 | `REDIS_URL` | (required) | Redis connection string |
 | `PORT` | `8080` | Server listen port |
 | `PLATFORM_URL` | `http://host.docker.internal:PORT` | URL passed to agent containers |
-| `SECRETS_ENCRYPTION_KEY` | (optional) | AES-256 key, 32 bytes |
+| `SECRETS_ENCRYPTION_KEY` | (optional) | AES-256 key, 32 bytes — static-mode envelope encryption (dev/self-host). Set `KMS_KEY_ARN` instead for production AWS KMS envelopes. |
+| `KMS_KEY_ARN` | (optional) | AWS KMS CMK ARN — production envelope encryption with per-secret data keys |
 | `CORS_ORIGINS` | `http://localhost:3000,http://localhost:3001` | Allowed CORS origins |
 | `RATE_LIMIT` | `600` | Requests per minute |
 | `MOLECULE_ENV` | (optional) | Set `production` to hide test endpoints |

@@ -80,7 +80,7 @@ CREATE TABLE workspace_secrets (
 );
 ```
 
-Stores API keys, credentials, and other secrets needed by workspace agents. Values are encrypted with AES-256 at the application layer. The encryption key comes from the `SECRETS_ENCRYPTION_KEY` environment variable on the platform — never stored in the database.
+Stores API keys, credentials, and other secrets needed by workspace agents. Values are sealed with envelope encryption — AWS KMS (per-secret data keys via `GenerateDataKey`, AES-256-GCM payload) when `KMS_KEY_ARN` is configured (production), or static-key AES-256-GCM under `SECRETS_ENCRYPTION_KEY` (dev / self-host). The static key, when used, is read from the platform environment and is never stored in the database. Both modes coexist during a KMS cutover, distinguished by a v2 prefix byte on KMS blobs. Implementation: `workspace-server/internal/crypto/envelope.go`.
 
 The provisioner reads secrets from this table, decrypts them, and injects them as environment variables when spinning up workspace containers. Secrets are never included in bundles (see [Constraints — Rule 5](../development/constraints-and-rules.md)).
 

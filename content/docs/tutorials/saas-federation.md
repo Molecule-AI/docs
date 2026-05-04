@@ -226,7 +226,7 @@ This terminates all EC2 instances, drops the Neon branch, and removes the org re
 |---|---|---|
 | Database | Neon branch-per-tenant | Tenant's branch, operator has no direct access |
 | Compute | EC2 in tenant's VPC | Control plane provisions, operator manages SG rules |
-| Credentials | No Fly/API tokens on tenant | All cloud credentials held by control plane |
+| Credentials | No AWS/cloud API tokens on tenant | All cloud credentials held by control plane |
 | API access | Org-scoped API keys | Tenant manages their own keys; operator has CP-level override |
 | Network | Security group: port 443 from platform only | Control plane manages; tenant can't modify |
 

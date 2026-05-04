@@ -296,7 +296,9 @@ docker compose up
 
 ### SaaS
 
-Hosted at `moleculesai.app` with per-tenant isolation. Each tenant gets a dedicated Fly Machine running the tenant image. The `MOLECULE_ORG_ID` env var gates API access -- every non-allowlisted request must carry a matching `X-Molecule-Org-Id` header or gets a 404. When unset, the guard is a passthrough so self-hosted and dev environments are unaffected.
+Hosted at `moleculesai.app` with per-tenant isolation. Each tenant gets a dedicated AWS EC2 instance running the tenant image, provisioned by the control plane (`api.moleculesai.app`, hosted on Railway). The `MOLECULE_ORG_ID` env var gates API access -- every non-allowlisted request must carry a matching `X-Molecule-Org-Id` header or gets a 404. When unset, the guard is a passthrough so self-hosted and dev environments are unaffected.
+
+> **Migration note (Apr 2026):** SaaS infrastructure was migrated from Fly Machines to AWS EC2 (workspaces) + Railway (control plane). See the [`molecule-controlplane` README "Migration history"](https://github.com/Molecule-AI/molecule-controlplane#migration-history) for the canonical record.
 
 ### Tenant Image
 

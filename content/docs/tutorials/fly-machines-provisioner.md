@@ -1,7 +1,18 @@
 ---
-title: "Provisioning Workspaces on Fly Machines (CONTAINER_BACKEND=flyio)"
+title: "Provisioning Workspaces on Fly Machines (CONTAINER_BACKEND=flyio) — DEPRECATED"
 ---
 # Provisioning Workspaces on Fly Machines (CONTAINER_BACKEND=flyio)
+
+> **DEPRECATED — historical reference only.** As of April 2026, the SaaS
+> control plane and tenant/workspace fleets migrated off Fly Machines to
+> **AWS EC2 (workspaces) + Railway (control plane)**. The current
+> production provisioner lives at
+> [`molecule-controlplane/internal/provisioner/ec2.go`](https://github.com/Molecule-AI/molecule-controlplane/blob/main/internal/provisioner/ec2.go).
+> The Fly provisioner code (`fly.go`, `internal/flyapi/`) remains in the
+> tree as legacy awaiting cleanup but is no longer the production path.
+> See the [`molecule-controlplane` README "Migration history"](https://github.com/Molecule-AI/molecule-controlplane#migration-history)
+> for the canonical record. This page is preserved as the original PR
+> #501 lineage record; do not follow it for new self-hosted deployments.
 
 Molecule AI can provision agent workspaces on [Fly Machines](https://fly.io/docs/machines/) instead of local Docker containers. When `CONTAINER_BACKEND=flyio` is set, every `POST /workspaces` creates a Fly Machine and boots the workspace agent inside it — with tier-based resource limits, env-var injection, and A2A registration handled automatically. The platform manages the workspace (lifecycle, auth, routing); Fly manages the machine it runs on.
 

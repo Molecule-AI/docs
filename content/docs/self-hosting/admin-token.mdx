@@ -30,7 +30,28 @@ platform.
 
 ## Setting ADMIN_TOKEN in production
 
-### Fly.io (recommended for self-hosted)
+The platform reads `ADMIN_TOKEN` from the process environment, so any
+production-grade host with a secrets store works. Pick the path that
+matches your deployment target.
+
+> **Note (Apr 2026):** The Molecule AI SaaS itself runs on AWS EC2
+> (workspaces) + Railway (control plane). Self-hosters can use any host
+> with secret-injection (Railway, Fly.io, AWS, GCP, bare-metal) — the
+> examples below are illustrative, not prescriptive. See the
+> [`molecule-controlplane` README "Migration history"](https://github.com/Molecule-AI/molecule-controlplane#migration-history)
+> for the canonical SaaS infrastructure record.
+
+### Railway
+
+In the Railway dashboard, go to your service → Variables and add
+`ADMIN_TOKEN`, then redeploy. Or via CLI:
+
+```bash
+railway variables --set ADMIN_TOKEN="your-generated-token"
+railway up
+```
+
+### Fly.io
 
 ```bash
 fly secrets set ADMIN_TOKEN="your-generated-token"
@@ -92,10 +113,13 @@ payload with a `count` field, the token is working.
 
 To rotate without downtime:
 
-1. **Deploy** the new token: `fly secrets set ADMIN_TOKEN="new-token" && fly deploy`
-2. **Verify** the new token works (see above)
-3. **Remove** the old token: `fly secrets unset OLD_TOKEN_NAME` (Fly does not
-   persist old secret values after unset)
+1. **Deploy** the new token via your host's secrets store, e.g.
+   `railway variables --set ADMIN_TOKEN="new-token" && railway up`
+   or `fly secrets set ADMIN_TOKEN="new-token" && fly deploy`.
+2. **Verify** the new token works (see above).
+3. **Remove** the old token from the secrets store. Most managed hosts
+   (Railway, Fly.io, AWS Secrets Manager) do not persist old secret
+   values after unset.
 
 ## Related
 

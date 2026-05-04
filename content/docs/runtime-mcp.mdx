@@ -394,6 +394,99 @@ This is the canonical signal that you need to regenerate from the canvas
 don't crash, but every platform-side operation will fail until you
 re-onboard.
 
+## Multi-workspace mode
+
+> **When to use this:** you want **one** running `molecule-mcp` process to
+> register into multiple workspaces — e.g. an agent on a developer's
+> company PC that needs to participate in BOTH the company tenant's
+> workspace AND a personal tenant's workspace at the same time. The
+> single process can then be addressed from either canvas, and
+> `list_peers` aggregates peers across both sides.
+
+### `MOLECULE_WORKSPACES` env var
+
+Set `MOLECULE_WORKSPACES` to a JSON array of `{"id", "token"}` pairs
+instead of `WORKSPACE_ID` + `MOLECULE_WORKSPACE_TOKEN`:
+
+```json title=".mcp.json"
+{
+  "mcpServers": {
+    "molecule": {
+      "type": "stdio",
+      "command": "molecule-mcp",
+      "env": {
+        "PLATFORM_URL": "https://your-tenant.moleculesai.app",
+        "MOLECULE_WORKSPACES": "[{\"id\":\"<company-ws-id>\",\"token\":\"<company-token>\"},{\"id\":\"<personal-ws-id>\",\"token\":\"<personal-token>\"}]"
+      }
+    }
+  }
+}
+```
+
+The shell-friendly form (line breaks for readability — keep it on one
+line in the actual env var):
+
+```bash
+export MOLECULE_WORKSPACES='[
+  {"id": "<company-ws-id>",  "token": "<company-token>"},
+  {"id": "<personal-ws-id>", "token": "<personal-token>"}
+]'
+molecule-mcp
+```
+
+When `MOLECULE_WORKSPACES` is set, the legacy `WORKSPACE_ID` and
+`MOLECULE_WORKSPACE_TOKEN` env vars are **ignored** — the JSON is the
+sole source of truth.
+
+### What changes at runtime
+
+The single `molecule-mcp` process spawns:
+
+- One `register` call per workspace (idempotent — registry no-ops if
+  already registered).
+- One heartbeat thread per workspace, named
+  `molecule-mcp-heartbeat-<src[:8]>` so log correlation is obvious.
+- One inbox poller per workspace. Cursor files are namespaced by
+  workspace id (`.inbox_cursor_<src[:8]>`) so a poller crash in one
+  workspace can't corrupt another's cursor.
+
+Each workspace's bearer token lives in its own slot of the per-workspace
+registry — outbound requests use the source workspace's token + a
+matching `X-Workspace-ID` header, so the platform's TenantGuard always
+sees a consistent (token, source) pair.
+
+### Cross-workspace tool routing
+
+A2A tools accept an optional `source_workspace_id` argument (or
+`workspace_id` for `send_message_to_user`). Defaults are tuned so the
+agent rarely has to set it explicitly:
+
+| Tool | Default source resolution |
+|---|---|
+| `list_peers` | Aggregates peers across **every** registered workspace, prefixing each entry with `via: <src[:8]>` so the agent can tell which side surfaced it. Side effect: populates a peer→source cache used by `delegate_task`. |
+| `delegate_task`, `delegate_task_async` | Auto-route via the cache populated by `list_peers`. Cache miss → fall back to `WORKSPACE_ID` (single-workspace path). |
+| `check_task_status` | Defaults to `WORKSPACE_ID`'s delegation log. Pass `source_workspace_id` to query a different registered workspace. |
+| `send_message_to_user` | Pass `workspace_id` to choose which canvas the message is delivered into. |
+
+Explicit override always wins — pass `source_workspace_id` (or
+`workspace_id`) on any tool call to bypass the auto-route.
+
+### Failure semantics
+
+The process exits non-zero at startup with a human-readable error if
+`MOLECULE_WORKSPACES` is malformed (invalid JSON, missing `id` /
+`token` fields, duplicate workspace ids, or empty array). Same failure
+shape as the single-workspace missing-env error — no half-registered
+state.
+
+### Single-workspace back-compat
+
+If `MOLECULE_WORKSPACES` is unset, behavior is **identical** to before:
+the process reads `WORKSPACE_ID` + `MOLECULE_WORKSPACE_TOKEN` (or
+`${CONFIGS_DIR}/.auth_token`), runs one heartbeat + one inbox poller,
+and the new optional tool args are simply unused. No migration needed
+for existing single-workspace operators.
+
 ## Troubleshooting
 
 ### Workspace stays offline after `/mcp` connect

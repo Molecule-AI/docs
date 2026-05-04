@@ -7,6 +7,22 @@ All notable changes to the Molecule AI platform are documented here.
 Entries are published daily at 23:50 UTC.
 
 ---
+## 2026-05-04
+
+### ✨ New features
+
+- **Multi-workspace mode for the universal MCP server**: a single `molecule-mcp` process can now register into N workspaces at once via the new `MOLECULE_WORKSPACES` JSON env var. Use case: an agent on a developer's PC that needs to participate in BOTH the company tenant's workspace AND a personal workspace — the same physical agent is reachable from either canvas, and `list_peers` aggregates peers across all registered workspaces with a `via: <src>` tag so the agent can tell which side surfaced each peer. Tools auto-route via a peer→source cache populated by `list_peers`, so agents rarely need to set the new `source_workspace_id` argument explicitly. Single-workspace operators see no behavior change. ([`molecule-core` #2739](https://github.com/Molecule-AI/molecule-core/pull/2739), [#2743](https://github.com/Molecule-AI/molecule-core/pull/2743))
+
+### 🔧 Fixes
+
+- **Tenant boot tail latency on apt-mirror slow days**: tenant boot's `install_apt_base` step previously varied 51s → 625s depending on apt-mirror weather, occasionally blowing the canary's 12-min job timeout. Fixed by baking `caddy` and `amazon-ssm-agent` into the thin tenant AMI alongside the workspace runtime images, turning the tenant user-data's two slowest install steps into 5s cache-hit no-ops. ([`molecule-controlplane` #462](https://github.com/Molecule-AI/molecule-controlplane/pull/462), Issue #456)
+- **Bake → deploy gap closed**: every successful `bake-thin-ami` workflow run now auto-promotes the new AMI ID into Railway staging's `EC2_AMI` variable, so the next tenant launch picks it up without a manual operator step. The promote step is gated on `auto_promote=true` (default) and reads the prior value first so the workflow log preserves a rollback target. ([`molecule-controlplane` #461](https://github.com/Molecule-AI/molecule-controlplane/pull/461) — RFC #388 PR-6)
+
+### 📚 Docs
+
+- **Multi-workspace MCP guide**: new section in [Bring Your Own Runtime](/docs/runtime-mcp#multi-workspace-mode) documents the `MOLECULE_WORKSPACES` env var, cross-workspace tool routing semantics, and back-compat guarantees for single-workspace operators.
+
+---
 ## 2026-04-23
 
 ### ✨ New features

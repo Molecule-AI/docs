@@ -5,10 +5,12 @@ title: "Provisioning Workspaces on Fly Machines (CONTAINER_BACKEND=flyio) — DE
 
 > **DEPRECATED — historical reference only.** As of April 2026, the SaaS
 > control plane and tenant/workspace fleets migrated off Fly Machines to
-> **AWS EC2 (workspaces) + Railway (control plane)**. The current
-> production provisioner lives at
-> [`molecule-controlplane/internal/provisioner/ec2.go`](https://github.com/Molecule-AI/molecule-controlplane/blob/main/internal/provisioner/ec2.go).
-> The Fly provisioner code (`fly.go`, `internal/flyapi/`) remains in the
+> **AWS EC2 (workspaces) + Railway (control plane)**. For the current
+> production provisioner, read
+> [Provisioning Workspaces on AWS EC2](./aws-ec2-provisioner.md) — env
+> vars, lifecycle, tier sizing, and the migration rationale. The Fly
+> provisioner code (`fly.go`, `internal/flyapi/`) remains in the
+> [`molecule-controlplane`](https://github.com/Molecule-AI/molecule-controlplane)
 > tree as legacy awaiting cleanup but is no longer the production path.
 > See the [`molecule-controlplane` README "Migration history"](https://github.com/Molecule-AI/molecule-controlplane#migration-history)
 > for the canonical record. This page is preserved as the original PR

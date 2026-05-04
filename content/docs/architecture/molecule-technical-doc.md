@@ -573,14 +573,16 @@ compliance:
 
 | Adapter | Core Strength | Image Tag |
 |---------|--------------|-----------|
-| **LangGraph** | Graph-based state machine, tool use, streaming | `workspace-template:langgraph` |
-| **DeepAgents** | Deep planning, multi-step task decomposition | `workspace-template:deepagents` |
 | **Claude Code** | Native coding workflows, CLI continuity, OAuth auth | `workspace-template:claude-code` |
+| **LangGraph** | Graph-based state machine, tool use, streaming | `workspace-template:langgraph` |
 | **CrewAI** | Role-based crews, structured task orchestration | `workspace-template:crewai` |
 | **AutoGen** | Multi-agent conversations, explicit strategies | `workspace-template:autogen` |
+| **DeepAgents** | Deep planning, multi-step task decomposition | `workspace-template:deepagents` |
+| **Hermes** | Multi-provider dispatch (Anthropic/Gemini native + OpenAI-compatible shim) | `workspace-template:hermes` |
+| **Gemini CLI** | Google Gemini CLI workspace | `workspace-template:gemini-cli` |
 | **OpenClaw** | CLI-native runtime, own session model | `workspace-template:openclaw` |
 
-**Branch-level WIP**: NemoClaw (NVIDIA T4 + Docker socket) on `feat/nemoclaw-t4-docker`.
+The canonical allowlist lives in `workspace-server/internal/handlers/admin_workspace_images.go` (`AllRuntimes`). Anything outside this list registers via the external-workspace path.
 
 Each adapter implements `setup()` + `create_executor()`. The base adapter provides shared infrastructure: system prompt assembly, skill loading, tool registration, coordinator detection, plugin injection.
 
@@ -979,7 +981,6 @@ Tools call `resp.json()` without catching JSON decode errors. Should wrap in try
 
 | Branch | Feature | Status |
 |--------|---------|--------|
-| `feat/nemoclaw-t4-docker` | NemoClaw adapter (NVIDIA T4 support) | WIP |
 | Backlog | Firecracker backend (faster cold starts) | Planned |
 | Backlog | E2B backend (cloud-hosted code sandbox) | Planned |
 | Backlog | pgvector semantic memory search | Planned |

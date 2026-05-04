@@ -149,7 +149,7 @@ Six runtime adapters ship production-ready on `main`: LangGraph, DeepAgents, Cla
 - Event broadcasting (Redis pub/sub → WebSocket fanout)
 - Docker provisioner with T1–T4 tier enforcement
 - Activity logging with configurable retention (default 7 days)
-- Secrets management (AES-256-GCM encryption)
+- Secrets management (KMS-envelope encryption in prod; AES-256-GCM static-key mode for dev/self-host)
 - File, terminal, bundle, template, traces APIs
 - Langfuse integration
 - Prometheus metrics endpoint
@@ -186,7 +186,7 @@ Six runtime adapters ship production-ready on `main`: LangGraph, DeepAgents, Cla
 |-------|---------|-------------|
 | `workspaces` | Current state registry | `id`, `name`, `role`, `tier` (1-4), `status`, `parent_id`, `agent_card` (JSONB), `url`, `forwarded_to`, `last_heartbeat_at`, `last_error_rate`, `active_tasks`, `uptime_seconds`, `current_task`, `runtime` |
 | `agents` | Agent assignment history | `workspace_id`, `model`, `status`, `removed_at`, `removal_reason` |
-| `workspace_secrets` | Encrypted credentials | `workspace_id`, `key`, `encrypted_value` (BYTEA, AES-256-GCM) |
+| `workspace_secrets` | Encrypted credentials | `workspace_id`, `key`, `encrypted_value` (BYTEA — KMS envelope in prod, AES-256-GCM static-key blob in dev/self-host) |
 | `agent_memories` | HMA-scoped memory | `workspace_id`, `content`, `scope` (LOCAL/TEAM/GLOBAL) |
 | `structure_events` | **Immutable** event log (APPEND-ONLY, never UPDATE/DELETE) | `event_type`, `workspace_id`, `agent_id`, `target_id`, `payload` (JSONB) |
 | `activity_logs` | Operational activity with retention | `workspace_id`, `activity_type`, `source_id`, `target_id`, `method`, `request_body`, `response_body`, `duration_ms`, `status`, `error_detail` |
@@ -824,7 +824,7 @@ workspace-server/
 │   ├── events/                # 3 files — event broadcasting + Postgres persistence
 │   ├── router/                # 2 files — route definitions + middleware
 │   ├── db/                    # 6 files — Postgres + Redis drivers, migrations
-│   └── crypto/                # 2 files — AES-256-GCM secrets encryption
+│   └── crypto/                # 2 files — envelope encryption (KMS or AES-256-GCM static key)
 └── migrations/                # 11 SQL migration files
 ```
 
@@ -907,7 +907,8 @@ Postgres + Redis + Langfuse only (for local development without containerized wo
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection |
 | `PORT` | `8080` | Platform listen port |
 | `PLATFORM_URL` | `http://host.docker.internal:8080` | Injected to workspace containers |
-| `SECRETS_ENCRYPTION_KEY` | Optional | AES-256 key (32 bytes) for secret encryption |
+| `SECRETS_ENCRYPTION_KEY` | Optional | AES-256 key (32 bytes) for static-mode secret encryption — used when `KMS_KEY_ARN` is unset (dev/self-host) or to decrypt legacy blobs during a KMS cutover |
+| `KMS_KEY_ARN` | Optional | AWS KMS CMK ARN — when set, secrets use KMS envelope encryption (per-secret data keys via `GenerateDataKey`); production deployments use this path |
 | `CONFIGS_DIR` | `/configs` | Workspace config template directory |
 | `PLUGINS_DIR` | `/plugins` | Shared plugin directory |
 | `ACTIVITY_RETENTION_DAYS` | `7` | Activity log retention |
@@ -951,7 +952,7 @@ Postgres + Redis + Langfuse only (for local development without containerized wo
 |---------|-------------|
 | **A2A streaming response** | Real-time task result delivery via SSE (`message/sendSubscribe`) |
 | **Onboarding wizard** | 4-step guided first-run experience in Canvas |
-| **Global API keys** | Platform-wide secrets with per-workspace override + AES-256 encryption |
+| **Global API keys** | Platform-wide secrets with per-workspace override; KMS envelope encryption in prod (AES-256-GCM static-key mode in dev/self-host) |
 | **Coordinator enforcement** | Team leads cannot do work, only route and aggregate |
 | **Cascade pause/resume** | Pausing a parent cascades to all children; paused children can't be individually resumed |
 | **Graceful A2A errors** | `[A2A_ERROR]` sentinel + retry with exponential backoff + fallback |

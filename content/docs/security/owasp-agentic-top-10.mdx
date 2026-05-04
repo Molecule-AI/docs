@@ -59,9 +59,11 @@ documents — through tool calls, logs, or responses.
 
 **Molecule AI controls:**
 
-- **Encrypted secrets at rest:** Workspace secrets are encrypted with
-  `SECRETS_ENCRYPTION_KEY` (AES-256) before storage. Plaintext never hits the
-  database.
+- **Encrypted secrets at rest:** Workspace secrets are sealed with envelope
+  encryption before storage — AWS KMS (per-secret data keys via `GenerateDataKey`,
+  AES-256-GCM payload) when `KMS_KEY_ARN` is set, or static-key AES-256-GCM
+  under `SECRETS_ENCRYPTION_KEY` for dev / self-host. Plaintext never hits the
+  database, and the platform refuses to start with neither configured.
 - **Secrets scoped per-workspace:** A token scoped to workspace A cannot access
   workspace B's secrets.
 - **Memory access controls:** The MCP server's memory tools respect workspace

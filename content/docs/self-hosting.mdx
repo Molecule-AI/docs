@@ -98,7 +98,8 @@ docker compose up
 | `PORT` | `8080` | Platform HTTP port |
 | `PLATFORM_URL` | `http://host.docker.internal:PORT` | URL passed to agent containers to reach the platform |
 | `CORS_ORIGINS` | `http://localhost:3000,http://localhost:3001` | Comma-separated allowed origins |
-| `SECRETS_ENCRYPTION_KEY` | -- | AES-256 key (32 bytes) for encrypting workspace secrets |
+| `SECRETS_ENCRYPTION_KEY` | -- | AES-256 key (32 bytes) for static-mode envelope encryption of workspace secrets (dev/self-host path) |
+| `KMS_KEY_ARN` | -- | AWS KMS CMK ARN — when set, secrets use KMS envelope encryption (per-secret data keys); production SaaS deployments use this path |
 | `WORKSPACE_DIR` | -- | Global fallback host path for `/workspace` bind-mount |
 | `MOLECULE_ENV` | -- | Set to `production` to hide E2E helper endpoints |
 | `ACTIVITY_RETENTION_DAYS` | `7` | How long activity logs are retained |
@@ -154,7 +155,9 @@ This image serves both the API and the canvas frontend from a single container.
 
 ### Secrets Encryption
 
-Set `SECRETS_ENCRYPTION_KEY` to a 32-byte AES-256 key to encrypt workspace secrets at rest. Without this variable, secrets are stored in plaintext.
+The platform supports two envelope-encryption modes for workspace secrets, picked at boot:
+
+**Static mode (self-host / dev).** Set `SECRETS_ENCRYPTION_KEY` to a 32-byte AES-256 key. Each secret is sealed with AES-256-GCM under that single long-lived key. Without this variable (and without `KMS_KEY_ARN`), the platform refuses to start rather than silently storing plaintext.
 
 ```bash
 # Generate a key
@@ -162,6 +165,12 @@ openssl rand -hex 32
 ```
 
 **Warning:** `SECRETS_ENCRYPTION_KEY` cannot be rotated without a data migration. Choose carefully before deploying to production.
+
+**KMS mode (production SaaS).** Set `KMS_KEY_ARN` to an AWS KMS Customer Master Key ARN. Each `Encrypt()` call asks KMS for a fresh per-secret data encryption key (`GenerateDataKey`), seals the secret payload with AES-256-GCM under that DEK, and stores the KMS-encrypted DEK alongside the ciphertext (envelope encryption). Rotating the CMK is a no-op for existing blobs — KMS tracks key versions internally.
+
+The two modes coexist during cutover: a v2 prefix byte tags KMS blobs; older static-mode blobs decrypt with `SECRETS_ENCRYPTION_KEY` until they're next written. Operators migrating to KMS can leave both env vars set during the transition.
+
+Implementation: `workspace-server/internal/crypto/envelope.go`.
 
 ### Rate Limiting
 

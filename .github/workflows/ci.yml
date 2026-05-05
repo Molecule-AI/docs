@@ -40,3 +40,9 @@ jobs:
         run: python3 scripts/check-broken-links.py --self-test
       - name: docs broken-link gate
         run: python3 scripts/check-broken-links.py
+      # Home-card href gate — narrower than broken-link (one file,
+      # ~3 hrefs) but high-value: home cards are the most-clicked
+      # surface on the site, a 404 here is the worst place for one.
+      # Caught the /docs/workspace + /docs/platform 404s on 2026-05-05.
+      - name: docs home-card href gate
+        run: python3 scripts/check-home-hrefs.py

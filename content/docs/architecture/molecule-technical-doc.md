@@ -335,13 +335,6 @@ This same logic governs: A2A delegation, memory scope enforcement, activity visi
 | `POST` | `/workspaces/:id/notify` | Emit user-facing notification |
 | `GET` | `/workspaces/:id/session-search` | Search recent activity + memory for contextual recall |
 
-### Team & Hierarchy (2 endpoints)
-
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| `POST` | `/workspaces/:id/expand` | Expand workspace into team (become coordinator) |
-| `POST` | `/workspaces/:id/collapse` | Collapse team back to single workspace |
-
 ### Files, Terminal, Templates, Bundles (8 endpoints)
 
 | Method | Endpoint | Purpose |
@@ -1075,7 +1068,6 @@ Every Tier 1 launch (Open Interpreter, CrewAI) had all four elements.
 - Workspace CRUD (list, create, get, delete, restart)
 - Agent communication (`chat_with_agent`)
 - Memory operations (`commit_memory`, `search_memory`)
-- Team management (`expand_team`, `collapse_team`)
 - Secrets management (`set_secret`, `list_secrets`)
 - File operations (`read_file`, `write_file`, `delete_file`)
 - Approvals (`list_pending_approvals`, `decide_approval`)

@@ -487,6 +487,82 @@ the process reads `WORKSPACE_ID` + `MOLECULE_WORKSPACE_TOKEN` (or
 and the new optional tool args are simply unused. No migration needed
 for existing single-workspace operators.
 
+## Onboarding diagnostic — `molecule-mcp doctor`
+
+If your runtime can't reach the platform after `Step 3 — Verify`, run
+the bundled diagnostic before opening an issue:
+
+```bash
+molecule-mcp doctor
+```
+
+It runs six checks against your current shell environment and prints
+each as `[OK]` / `[WARN]` / `[FAIL]` plus an actionable hint:
+
+| Check | What it verifies |
+|---|---|
+| Python version | `>=3.11` (the wheel pins this; on 3.10 pip silently filters with `from versions: none`, which reads as "package missing") |
+| Wheel install | `molecule_runtime` importable in the active interpreter |
+| Binary on PATH | `molecule-mcp` resolves on `$PATH` from this shell |
+| Env vars | `PLATFORM_URL` + (`WORKSPACE_ID` or `MOLECULE_WORKSPACES`) + (`MOLECULE_WORKSPACE_TOKEN` or `MOLECULE_WORKSPACE_TOKEN_FILE`) all set |
+| Platform reachability | `GET ${PLATFORM_URL}/healthz` returns 2xx; flags missing scheme so a bare hostname doesn't read as DNS error |
+| Token auth | Token works against the platform (lightweight probe, never mutates server state) |
+
+Exit code `0` on all green, `1` on any `[FAIL]`. Scriptable for CI /
+install-checks: a failing exit code means the install isn't ready,
+not that the doctor errored.
+
+```bash
+$ molecule-mcp doctor
+=== molecule-mcp doctor ===
+  [OK]   Python version: 3.12.5 (>=3.11 ✓)
+  [OK]   Wheel install: molecule_runtime 0.4.12
+  [OK]   Binary on PATH: /usr/local/bin/molecule-mcp
+  [FAIL] Env vars: missing MOLECULE_WORKSPACE_TOKEN (or _TOKEN_FILE)
+  [WARN] Platform reachability: PLATFORM_URL unset, skipping
+  [WARN] Token auth: skipping — env not configured
+
+1 check(s) failed.
+```
+
+The doctor's auth probe is read-only by design — it doesn't write
+agent_card metadata or rotate inbound secrets, so running it
+repeatedly against a healthy workspace can't drift any server-side
+state.
+
+### Token from a file (keychain-friendly)
+
+Long-lived tokens in shell env or `.mcp.json` leak into shell history
+and screenshots. Set `MOLECULE_WORKSPACE_TOKEN_FILE` to a path
+containing the token instead — useful for piping a token from a
+keychain shim or a sealed-secret file:
+
+```bash
+# macOS keychain shim
+security find-generic-password -s molecule-mcp -w > ~/.config/molecule/token
+chmod 600 ~/.config/molecule/token
+
+export MOLECULE_WORKSPACE_TOKEN_FILE=~/.config/molecule/token
+molecule-mcp
+```
+
+The wheel reads the file at startup. Empty / whitespace-only files
+surface a tailored error (`token file <path> is empty` or `points to
+<path> which doesn't exist`) instead of a generic 401 from the
+platform — `molecule-mcp doctor` flags this case explicitly.
+
+Resolution order when both env vars are set:
+
+1. `MOLECULE_WORKSPACE_TOKEN` — inline env value, if non-empty.
+2. `MOLECULE_WORKSPACE_TOKEN_FILE` — read the path's contents.
+3. `${CONFIGS_DIR}/.auth_token` — in-container fallback (predates this
+   feature; left in place for the bundled workspace runtime).
+
+Inline takes precedence so a one-off override (`MOLECULE_WORKSPACE_TOKEN=tok molecule-mcp`)
+beats whatever the file says. To rotate the token, update the file
+*and* unset / clear the inline env, then restart the runtime — there
+is no live-reload today.
+
 ## Troubleshooting
 
 ### Workspace stays offline after `/mcp` connect
@@ -532,7 +608,7 @@ MCP config and restart your runtime.
 
 ### `Workspace <id> was deleted on the platform...` from `get_workspace_info`
 
-Since [#2429](https://github.com/Molecule-AI/molecule-core/pull/2449),
+Since [#2449](https://github.com/Molecule-AI/molecule-core/pull/2449),
 `GET /workspaces/:id` returns **410 Gone** (not 200 + `status:"removed"`)
 when the workspace has been deleted. The MCP wheel's `get_workspace_info`
 tool surfaces this as a tailored error message:

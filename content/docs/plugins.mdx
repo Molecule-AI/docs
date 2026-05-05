@@ -35,11 +35,17 @@ runtime.
 | Shape | Description |
 |-------|-------------|
 | agentskills.io format | `SKILL.md` + optional scripts, hooks, and `plugin.yaml` manifest |
-| MCP server | Model Context Protocol server (coming soon for more runtimes) |
 
-The shape is orthogonal to the source. A `github://` plugin and a `local://`
-plugin can both be agentskills.io format. The per-runtime adapter inside the
-workspace handles loading at startup.
+The shape is orthogonal to the source — a `github://` plugin and a
+`local://` plugin can both be agentskills.io format. The per-runtime
+adapter inside the workspace handles loading at startup.
+
+The `plugin.yaml` manifest declares which `runtimes` the plugin
+supports (claude-code, hermes, opencode, etc.), so an installer can
+refuse a plugin that isn't compatible with the workspace's runtime
+before it lands in `/configs/plugins/`. See
+[Runtime Compatibility Check](#runtime-compatibility-check) below
+for the runtime-side contract.
 
 ---
 

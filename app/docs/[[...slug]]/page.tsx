@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { source } from '@/lib/source';
 import {
   DocsBody,
@@ -28,10 +28,19 @@ function getLastUpdate(filePath: string): number | null {
     // null on any failure (build without .git, file outside the repo,
     // etc.) — we'd rather hide the "Last updated" line than crash the
     // page build.
-    const iso = execSync(`git log -1 --format=%cI -- "${filePath}"`, {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
+    //
+    // execFileSync (not execSync) — passes filePath as an argv element
+    // straight to git, never via /bin/sh. Defense-in-depth: page.path
+    // today comes from fumadocs and is safe, but a future content file
+    // with a space in the name (or worse) wouldn't break this call.
+    const iso = execFileSync(
+      'git',
+      ['log', '-1', '--format=%cI', '--', filePath],
+      {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      },
+    ).trim();
     if (iso) {
       const t = Date.parse(iso);
       if (!Number.isNaN(t)) result = t;

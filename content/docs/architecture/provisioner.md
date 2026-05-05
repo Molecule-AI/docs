@@ -183,4 +183,3 @@ Structure events and agent card history are **never** deleted — only the conve
 - [Workspace Tiers](./workspace-tiers.md) — What each tier provides
 - [Workspace Runtime](../agent-runtime/workspace-runtime.md) — What runs inside the container
 - [Registry & Heartbeat](../api-protocol/registry-and-heartbeat.md) — How provisioning transitions to online
-- [Team Expansion](../agent-runtime/team-expansion.md) — Provisioning triggered by team expansion

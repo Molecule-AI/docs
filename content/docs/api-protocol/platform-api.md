@@ -172,13 +172,6 @@ Backward-compatible admin aliases also exist under `/admin/secrets`.
 | `GET` | `/workspaces/:id/approvals` | List approvals for a workspace |
 | `POST` | `/workspaces/:id/approvals/:approvalId/decide` | Approve or deny |
 
-### Team operations
-
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/workspaces/:id/expand` | Expand workspace into a team |
-| `POST` | `/workspaces/:id/collapse` | Collapse team back down |
-
 ### Plugins
 
 | Method | Path | Description |

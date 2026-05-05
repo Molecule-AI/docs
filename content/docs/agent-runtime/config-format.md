@@ -161,7 +161,7 @@ The file watcher monitors the entire config directory. When `config.yaml` change
 | `a2a` | **No** | Port and protocol changes require container restart |
 | `delegation` | Yes | Retry/timeout defaults take effect on next delegation call |
 | `shared_context` | Yes | Children fetch on next prompt rebuild; no restart needed |
-| `sub_workspaces` | **No** | Team structure changes go through `POST /workspaces/:id/expand` |
+| `sub_workspaces` | **No** | Team structure is materialised by `POST /org/import` (org-template path); incremental hot-reload of sub-workspaces is not supported |
 
 See [Skills — Live Reload](./skills.md#live-reload) for the full file watcher flow.
 
@@ -182,11 +182,10 @@ sub_workspaces:
   - config: qa-pm
 ```
 
-The provisioner reads these and spins up sub-workspace containers using the referenced configs. See [Team Expansion](./team-expansion.md).
+The provisioner reads these and spins up sub-workspace containers using the referenced configs at org-import time (`POST /org/import`).
 
 ## Related Docs
 
 - [Skills](./skills.md) — Skill package structure and interface
 - [Workspace Runtime](./workspace-runtime.md) — How config is loaded at startup
 - [Workspace Tiers](../architecture/workspace-tiers.md) — What each tier enables
-- [Team Expansion](./team-expansion.md) — How sub_workspaces creates teams

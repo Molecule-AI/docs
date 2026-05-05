@@ -193,13 +193,6 @@ See [`molecule-mcp-server` PR #6](https://github.com/Molecule-AI/molecule-mcp-se
 | `list_plugin_sources` | `/plugins/sources` | GET | Registered source schemes |
 | `check_plugin_compatibility` | `/workspaces/:id/plugins/compatibility` | GET | Preflight check |
 
-### Teams / Hierarchy
-
-| MCP Tool | API Route | Method | Description |
-|----------|-----------|--------|-------------|
-| `expand_team` | `/workspaces/:id/expand` | POST | Expand team node |
-| `collapse_team` | `/workspaces/:id/collapse` | POST | Collapse team node |
-
 ### Templates & Bundles
 
 | MCP Tool | API Route | Method | Description |

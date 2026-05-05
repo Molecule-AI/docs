@@ -20,3 +20,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # Self-test runs the deny-list against synthetic deleted-symbol
+      # probes BEFORE checking real content. This catches a regression
+      # where a pattern's regex stops matching the symbol it's meant to
+      # guard against — without it, the gate could silently rot to
+      # always-pass even as new stale refs land.
+      - name: docs accuracy gate (self-test)
+        run: bash scripts/check-stale-refs.sh --self-test
+      - name: docs accuracy gate
+        run: bash scripts/check-stale-refs.sh

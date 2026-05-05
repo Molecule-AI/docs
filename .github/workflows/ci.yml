@@ -29,3 +29,14 @@ jobs:
         run: bash scripts/check-stale-refs.sh --self-test
       - name: docs accuracy gate
         run: bash scripts/check-stale-refs.sh
+      # Broken-link gate — pairs with the stale-refs gate above. The
+      # stale-refs check catches symbol references that should have
+      # been deleted; this one catches link targets that moved or
+      # never existed (the fumadocs build doesn't fail on broken
+      # cross-links — they render as visible "broken text" once a
+      # user clicks). Self-test runs first to verify the resolver
+      # itself; real run follows.
+      - name: docs broken-link gate (self-test)
+        run: python3 scripts/check-broken-links.py --self-test
+      - name: docs broken-link gate
+        run: python3 scripts/check-broken-links.py

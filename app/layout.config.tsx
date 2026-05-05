@@ -41,10 +41,22 @@ export const baseOptions: BaseLayoutProps = {
     ),
     url: 'https://doc.moleculesai.app',
   },
+  // Top-nav links — internal docs sections first (mirrors the
+  // MiniMax / Vercel / Anthropic pattern of major-section anchors at
+  // the top), then external app surfaces. The internal four match
+  // the section dividers in `content/docs/meta.json` so the user has
+  // a one-click hop into each major section without scrolling the
+  // full sidebar.
   links: [
-    { text: 'Platform', url: 'https://app.moleculesai.app', external: true },
-    { text: 'Marketplace', url: 'https://market.moleculesai.app', external: true },
-    { text: 'Landing', url: 'https://www.moleculesai.app', external: true },
+    { text: 'Quickstart', url: '/docs/quickstart' },
+    { text: 'Architecture', url: '/docs/architecture' },
+    { text: 'API Reference', url: '/docs/api-reference' },
+    { text: 'Marketplace', url: '/docs/marketplace' },
+    { text: 'Changelog', url: '/docs/changelog' },
+    { type: 'menu', text: 'Open app', items: [
+      { text: 'Platform', url: 'https://app.moleculesai.app', external: true },
+      { text: 'Landing', url: 'https://www.moleculesai.app', external: true },
+    ] },
   ],
   githubUrl: 'https://github.com/Molecule-AI',
 };

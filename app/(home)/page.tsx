@@ -16,8 +16,10 @@ const lanes = [
     artLabel: 'Workspace',
     artTagline: 'Runtime + tools + memory',
     body: 'Pick a runtime template (Claude Code, LangGraph, CrewAI, Hermes, codex, openclaw, …), wire your tools, and ship.',
-    href: '/docs/workspace',
-    cta: 'Workspace guide',
+    // /docs/workspace doesn't exist as a slug; /docs/quickstart is
+    // the actual "first agent deployed" guide a builder lands on.
+    href: '/docs/quickstart',
+    cta: 'Quickstart guide',
     // Deep blue → cyan gradient. Pairs with the hero "AI agent organizations"
     // accent + the canvas chat-bubble blue, so a builder lands on something
     // tonally familiar.
@@ -29,8 +31,10 @@ const lanes = [
     artLabel: 'Platform',
     artTagline: 'A2A · memory · governance',
     body: 'Topology, A2A delegation, three-tier memory, governance — the platform layer that ties multi-agent teams together.',
-    href: '/docs/platform',
-    cta: 'Platform reference',
+    // /docs/platform doesn't exist as a slug; /docs/architecture is
+    // the platform-layer topology + governance overview.
+    href: '/docs/architecture',
+    cta: 'Architecture overview',
     // Warm amber → orange. Same family as the kicker dot (#c0532b) and
     // the warm-paper canvas theme — operators reading platform docs are
     // typically the same people who configure the canvas.

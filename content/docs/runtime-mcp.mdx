@@ -230,6 +230,72 @@ External runtimes can't accept inbound HTTP, so the wheel polls
 through `wait_for_message` + `inbox_peek` / `inbox_pop`. Use those
 instead of waiting for an HTTP webhook — there isn't one.
 
+### Async delegation lifecycle
+
+`delegate_task` blocks until the peer replies and is the right tool
+for an interactive turn. For longer-running work — research sweeps,
+codebase audits, anything that legitimately takes more than a turn —
+use `delegate_task_async`:
+
+```python
+# Returns immediately with {delegation_id, status: "delegated"}
+result = delegate_task_async(workspace_id="<peer-id>", task="Audit the auth module for OWASP-top-10 issues")
+delegation_id = json.loads(result)["delegation_id"]
+
+# ... work on something else, or yield the turn back to the user ...
+
+# Later — same agent, or after a process restart:
+status = check_task_status(workspace_id="", task_id=delegation_id)
+```
+
+Each delegation moves through a small lifecycle the platform tracks
+in a per-task ledger (parallel to the activity-log event stream):
+
+| Status | Meaning |
+|---|---|
+| `queued` | The delegate request was accepted; the platform hasn't dispatched it yet |
+| `dispatched` | A2A request sent to the peer; awaiting acknowledgement |
+| `in_progress` | Peer acknowledged and is working |
+| `completed` | Peer returned a result |
+| `failed` | Peer returned an error, or dispatch failed |
+| `stuck` | Peer accepted but stopped heartbeating (no progress for >10 min while `in_progress`) |
+
+The terminal states (`completed`, `failed`, `stuck`) are forward-only
+— a delegation that completed can't be revised back to in-progress,
+and `check_task_status` will keep returning the same terminal payload
+indefinitely. This makes restart-safe polling trivial: a re-firing
+agent that lost local state can re-issue `check_task_status` on the
+same `delegation_id` and get the same answer.
+
+Default deadline is **6 hours** from queue time; pass a tighter
+per-task deadline if your task should fail fast (the API supports it
+but the MCP wrapper takes the default). Idempotency is automatic —
+the `(source, target, task)` triple hashes to a stable
+`idempotency_key`, so a restarted agent that re-fires the same
+delegation gets the same `delegation_id` back instead of a duplicate.
+
+#### `check_task_status`'s `workspace_id` argument is ignored
+
+The first positional arg of `check_task_status` is kept for
+backward-compat with an earlier shape but is **not used** — the call
+queries the *source* (sending) workspace's delegation log, not the
+target's. Pass `task_id` (the delegation_id you got from
+`delegate_task_async`) and, in multi-workspace mode, `source_workspace_id`
+to pick which sender's log to query. Empty `task_id` returns the
+recent log for that source.
+
+```python
+# All of these query the SAME source workspace's log;
+# the workspace_id arg is a no-op:
+check_task_status(workspace_id="any-string", task_id=delegation_id)
+check_task_status(workspace_id="", task_id=delegation_id)
+check_task_status(workspace_id="<peer-id>", task_id=delegation_id)  # peer-id ignored
+
+# In multi-workspace mode, route to a non-default source:
+check_task_status(workspace_id="", task_id=delegation_id,
+                  source_workspace_id="<other-registered-ws-id>")
+```
+
 ### Inbound delivery: universal poll, optional push
 
 Inbound messages reach the agent via one of two paths. The wheel

@@ -183,5 +183,5 @@ What is on the roadmap for Phase 2d (not yet shipped):
 - PR #255: [Phase 2b — native Gemini dispatch](https://github.com/Molecule-AI/molecule-core/pull/255)
 - PR #267: [Phase 2c — multi-turn history on all paths](https://github.com/Molecule-AI/molecule-core/pull/267)
 - [Hermes adapter design](../adapters/hermes-adapter-design.md)
-- [Platform API reference](../api-reference.md)
+- [Platform API reference](../api-reference.mdx)
 - Issue [#513](https://github.com/Molecule-AI/molecule-core/issues/513)

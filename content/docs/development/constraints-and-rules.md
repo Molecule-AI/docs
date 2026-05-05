@@ -80,7 +80,6 @@ Postgres and Redis must not expose host ports. They communicate exclusively over
 
 ## Related Docs
 
-- [SaaS Upgrade Path](../product/saas-upgrade.md) — How auth and multi-tenancy are added
 - [Bundle System](../agent-runtime/bundle-system.md) — Why bundles exclude secrets
 - [Event Log](../architecture/event-log.md) — The append-only rule
 - [Communication Rules](../api-protocol/communication-rules.md) — Hierarchy = access control

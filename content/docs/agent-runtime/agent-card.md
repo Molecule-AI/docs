@@ -81,7 +81,6 @@ When a peer workspace receives `AGENT_CARD_UPDATED`, it rebuilds its system prom
 
 ## Related Docs
 
-- [Core Concepts](../product/core-concepts.md) — What an Agent Card is
 - [A2A Protocol](../api-protocol/a2a-protocol.md) — How the card fits into A2A
 - [Workspace Runtime](./workspace-runtime.md) — How the card is generated at startup
 - [Canvas UI](../frontend/canvas.md) — How the card drives node rendering

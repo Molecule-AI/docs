@@ -74,4 +74,4 @@ ADK workspaces participate in the same A2A network as Claude Code, Gemini CLI, H
 - PR #550: [feat(adapters): add google-adk runtime adapter](https://github.com/Molecule-AI/molecule-core/pull/550)
 - [Google ADK (adk-python)](https://github.com/google/adk-python)
 - [Gemini CLI runtime tutorial](./gemini-cli-runtime.md)
-- [Platform API reference](../api-reference.md)
+- [Platform API reference](../api-reference.mdx)

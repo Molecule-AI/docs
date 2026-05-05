@@ -11,7 +11,7 @@ defines how Molecule AI uses each term and flags the conflicts you're
 most likely to hit when reading adjacent documentation.
 
 Cross-referenced from
-[`docs/ecosystem-watch.md`](./ecosystem-watch.md) — when a new project
+`docs/ecosystem-watch.md` — when a new project
 lands in the watch list with a colliding term, add a row here.
 
 ## Core terms
@@ -67,7 +67,7 @@ two:
 
 ## Cross-references
 
-- [`README.md`](../README.md) — top-level stack description.
-- [`CLAUDE.md`](../CLAUDE.md) — operational vocabulary for agents in this repo.
-- [`docs/ecosystem-watch.md`](./ecosystem-watch.md) — source of truth for adjacent-project claims.
-- [`docs/architecture.md`](./architecture.md) — deeper definitions for workspace, canvas, platform.
+- [`README.md`](../../README.md) — top-level stack description.
+- [`CLAUDE.md`](../../CLAUDE.md) — operational vocabulary for agents in this repo.
+- `docs/ecosystem-watch.md` — source of truth for adjacent-project claims.
+- [`docs/architecture.md`](./architecture.mdx) — deeper definitions for workspace, canvas, platform.

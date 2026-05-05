@@ -210,7 +210,6 @@ contains valid Python files with `@tool`-decorated functions. See
   frontmatter schema, and tool interface
 - [Config Format](../agent-runtime/config-format.md) — How skills are
   declared in `config.yaml`
-- [Plugin System](../plugins/overview.md) — Installing full plugin
   packages (skills + MCP servers + shared rules)
 - [Remote Agent Tutorial](../tutorials/register-remote-agent.md) —
   Installing skills on remote (external) agents

@@ -285,6 +285,73 @@ embedding call fails for a given query, the platform falls back transparently
 to the text-search path. The `similarity_score` field is absent in fallback
 responses. You do not need to change client code to handle both modes.
 
+### Memory v2 (namespace-aware, plugin-backed)
+
+The v2 endpoints back the canvas Memory tab redesign. They sit in front
+of the same memory plugin used by the agent's `commit_memory` /
+`recall_memory` tools but expose a **namespace-aware** read+forget
+interface for the canvas — the agent tools stay the v1 shape.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/workspaces/:id/v2/namespaces` | WorkspaceAuth | Resolve the namespace tree this workspace can read+write. |
+| GET | `/workspaces/:id/v2/memories` | WorkspaceAuth | Search the plugin for memories visible to this workspace. |
+| DELETE | `/workspaces/:id/v2/memories/:memoryId` | WorkspaceAuth | Forget a memory; plugin enforces ownership. |
+
+#### `GET /workspaces/:id/v2/namespaces`
+
+Returns the dropdown source for the canvas Memory tab — two arrays
+sharing the same `NamespaceView` shape:
+
+```json
+{
+  "readable": [
+    {"name": "workspace:abc-123", "kind": "workspace", "label": "Workspace (abc-123)"},
+    {"name": "team:eng",          "kind": "team",      "label": "Team (eng)"},
+    {"name": "org:acme",          "kind": "org",       "label": "org:acme"}
+  ],
+  "writable": [
+    {"name": "workspace:abc-123", "kind": "workspace", "label": "Workspace (abc-123)"}
+  ]
+}
+```
+
+`writable` is always a subset of `readable`. The canvas can disable
+read-only entries when wiring up commit-from-canvas (the symmetric
+write surface is reserved for a follow-up).
+
+#### `GET /workspaces/:id/v2/memories`
+
+All four query params are optional:
+
+| Param | Default | Description |
+|---|---|---|
+| `namespace` | _all readable_ | Scope to a single namespace from the readable set. |
+| `q` | _empty_ | Full-text query. Empty = recency-ordered listing. |
+| `kind` | _all_ | One of `fact`, `summary`, `checkpoint`. |
+| `limit` | `50` | Max rows; clamped to `100`. |
+
+```bash
+curl -H "Authorization: Bearer {token}" \
+  "https://{tenant}.moleculesai.app/workspaces/{id}/v2/memories?namespace=team:eng&q=auth&kind=fact&limit=20"
+```
+
+**Server-side ACL invariant**: the request is intersected with the
+resolver's readable set on the server, so a stale-cache canvas asking
+for a forbidden `namespace=foo:bar` returns an empty list, **not** 403.
+Empty result is indistinguishable from "you can't read this namespace"
+— same existence-non-inferring posture as v1.
+
+#### `DELETE /workspaces/:id/v2/memories/:memoryId`
+
+Forget a memory. The platform passes `requested_by_namespace =
+workspace:<id>` to the plugin so the audit trail records who
+initiated the forget. The plugin's ACL gate decides whether the
+deletion lands.
+
+Returns **404 (not 403)** for a missing or non-owned memory —
+matches the v1 DELETE's existence-non-inferring response.
+
 ---
 
 ## Files

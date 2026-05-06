@@ -1,0 +1,57 @@
+# Gitea Actions workflow — deploy to Vercel via CLI on push to main/staging.
+#
+# Replaces github.com push triggers (the Vercel→GitHub integration). With
+# Gitea as canonical SCM, we drive deploys from here. Same Vercel project,
+# same domains — only the trigger source changes.
+#
+# Drop this file at .gitea/workflows/deploy-vercel.yml in each Vercel-hosted
+# repo: landingpage, molecule-app, docs, molecules-market.
+#
+# Required Gitea secrets (Settings → Actions → Secrets):
+#   VERCEL_TOKEN        — gitea-actions-ci token from vercel.com/account/tokens
+#   VERCEL_ORG_ID       — team ID (team_… for team scope)
+#   VERCEL_PROJECT_ID   — per-repo prj_…
+#
+# All three are set automatically by the operator-host bootstrap script.
+
+name: deploy-vercel
+on:
+  push:
+    branches: [main, staging]
+
+env:
+  # Vercel CLI reads these from env when no .vercel/project.json is present
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull environment + build + deploy
+        run: |
+          set -eu
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            ENV_FLAG=production
+            DEPLOY_FLAGS="--prebuilt --prod"
+          else
+            ENV_FLAG=preview
+            DEPLOY_FLAGS="--prebuilt"
+          fi
+
+          vercel pull --yes --environment=$ENV_FLAG --token=$VERCEL_TOKEN
+          vercel build $( [ "$ENV_FLAG" = "production" ] && echo --prod ) --token=$VERCEL_TOKEN
+
+          url=$(vercel deploy $DEPLOY_FLAGS --token=$VERCEL_TOKEN)
+          echo "Deployed: $url"
+          echo "deployment_url=$url" >> "$GITHUB_OUTPUT"

@@ -7,6 +7,25 @@ All notable changes to the Molecule AI platform are documented here.
 Entries are published daily at 23:50 UTC.
 
 ---
+## 2026-05-06
+
+### ✨ New features
+
+- **Inline video + audio playback in chat** ([RFC #2991 PR-2](https://github.com/Molecule-AI/molecule-core/pull/3000)): canvas chat now renders video and audio attachments as HTML5 `<video>` / `<audio>` players directly in the message stream — no more "click → opens in new tab → click play". Uses the same auth-aware download path as image attachments.
+
+### 🔧 Fixes
+
+- **Canvas Files tab now works on SaaS workspaces** ([#2999 PR-A](https://github.com/Molecule-AI/molecule-core/pull/3002)): the Files tab was returning "0 files / No config files yet" for every SaaS workspace and every root (`/configs`, `/home`, `/workspace`, `/plugins`) because `ListFiles` was missing the SSH-via-EIC branch that `ReadFile` and `WriteFile` already had. On SaaS, `dockerCli` is nil → `findContainer` returned `""` → handler silently returned an empty array. `DeleteFile` had the same gap. Both ops now go through a single `withEICTunnel` SSOT helper — same shape as the existing read/write paths, with the same hardened SSH args (`LogLevel=ERROR`, `StrictHostKeyChecking=no`, `ConnectTimeout`). Right-click delete in the Files tab now actually deletes.
+- **External-runtime workspaces show "Files not available" instead of looking broken** ([#2999 PR-B](https://github.com/Molecule-AI/molecule-core/pull/3003)): external workspaces (mac laptop, mac mini, hermes-on-home-server) were rendering the FilesTab identically to the SaaS empty-listing bug — visually indistinguishable from the broken state, read as a bug. Now shows a folder-with-slash icon + "Files not available" headline + body text naming the runtime and pointing the user at Chat. Mirrors the affordance the TerminalTab adopted for runtimes without a TTY in PR #2830.
+- **Memory tab namespace labels show readable names instead of UUID prefixes** ([#2988](https://github.com/Molecule-AI/molecule-core/issues/2988) / [#2990](https://github.com/Molecule-AI/molecule-core/pull/2990)): root workspaces (where `workspace_id == team_id == org_id`) had three identical UUID-prefix labels in the Memory tab namespace dropdown. Now uses display names (`Workspace (My Project)` / `Team (Engineering)` / `org:acme`) so the dropdown is actually distinguishable.
+
+### 🧹 Internal
+
+- **Auto-promote-staging stale-block alarm** ([#2975](https://github.com/Molecule-AI/molecule-core/issues/2975) / [#2983](https://github.com/Molecule-AI/molecule-core/pull/2983)): hourly check fires a loud workflow failure when the open `staging → main` auto-promote PR is `REVIEW_REQUIRED` for >4h. Catches the silent-block class of bug from 2026-05-05 (Memory v2 + reno-stars fix sat on staging while main was 25 commits behind because no human had approved the auto-promote PR).
+- **Orphan Cloudflare tunnel cleanup added to sweep** ([#2987](https://github.com/Molecule-AI/molecule-core/issues/2987) / [#2995](https://github.com/Molecule-AI/molecule-core/pull/2995)): the hourly sweep now reaps orphan CF tunnels alongside its existing checks, closing the leak path documented in the 2026-05-06 audit.
+- **Skip `config.yaml` fetch for external/hermes runtimes** ([#2982](https://github.com/Molecule-AI/molecule-core/pull/2982)): canvas tried to fetch a workspace `config.yaml` file for every workspace shape, but external + hermes runtimes don't expose one — produced spurious 404s in the inspector. Now gated on runtime kind.
+
+---
 ## 2026-05-05
 
 ### ✨ New features

@@ -12,6 +12,9 @@ Entries are published daily at 23:50 UTC.
 ### ✨ New features
 
 - **Inline video + audio playback in chat** ([RFC #2991 PR-2](https://github.com/Molecule-AI/molecule-core/pull/3000)): canvas chat now renders video and audio attachments as HTML5 `<video>` / `<audio>` players directly in the message stream — no more "click → opens in new tab → click play". Uses the same auth-aware download path as image attachments.
+- **Inline PDF and text/code preview in chat** ([RFC #2991 PR-3](https://github.com/Molecule-AI/molecule-core/pull/3006)): PDFs render with a 📄 chip + filename and click-to-fullscreen lightbox using the browser-native PDF viewer (no pdf.js bundle bloat). Text / JSON / YAML / log / CSV files show their first 10 lines in a monospace `<pre><code>` block with a "Show all N lines" expand affordance and a download header. Text fetch is capped at 256 KB via ReadableStream so a multi-MB log doesn't crash the bubble.
+- **Files tab — VSCode-style right-click context menu** ([#2999 PR-C](https://github.com/Molecule-AI/molecule-core/pull/3004)): right-click any row in the Files tab to get Open / Download / Delete (directories get Delete only). `↓`/`↑` rove focus, `Esc` and outside-click dismiss, only one menu open at a time. The Delete item is gated on `/configs` (matches the existing toolbar gate) and renders disabled with muted background on other roots.
+- **Files tab — drag-drop upload from Finder/Explorer** ([#2999 PR-D](https://github.com/Molecule-AI/molecule-core/pull/3005)): drop files or folders directly onto a target directory in the tree (or anywhere in the empty-state area for `/configs` root). Folder drops walk the full tree via `webkitGetAsEntry()` with multi-batch `readEntries()` looping, so big folders aren't silently truncated at the browser's per-call cap. Dragging onto a non-`/configs` root is a no-op — same gate as the toolbar's Upload.
 
 ### 🔧 Fixes
 

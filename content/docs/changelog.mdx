@@ -37,6 +37,16 @@ Entries are published daily at 23:50 UTC.
 - Tenant Postgres swapped to `pgvector/pgvector:pg16` — Memory v2 plugin now uses native `pgvector` for similarity search. ([`molecule-controlplane` #490](https://github.com/Molecule-AI/molecule-controlplane/pull/490))
 - Codex / OpenClaw external-connect templates now spawn the `molecule-mcp` console-script wrapper instead of `python3 -m molecule_runtime.a2a_mcp_server` — bare module spawn missed presence wiring, leaving these runtimes off the canvas after registration. ([`molecule-core` #2958](https://github.com/Molecule-AI/molecule-core/pull/2958))
 
+### 🌅 Late-day updates (00:00–01:00 UTC)
+
+- **SSOT typed-variant A2A response parser landed** ([`molecule-core` #2979](https://github.com/Molecule-AI/molecule-core/pull/2979)): the broader structural fix that the morning's #2972 hotfix explicitly deferred. Replaces three independent `if "result" / elif "error"` parsers in `a2a_client.py` and `a2a_cli.py` with a single typed dispatch (`Result | Error | Queued | Malformed` frozen dataclasses), and adds the auto-fallback path so `delegate_task` against a poll-mode peer transparently retries via `/delegate` when the synchronous send returns `Queued`. External-to-external delegation between two `molecule-mcp` standalone runtimes is now first-class, not "happens to work because of a hotfix".
+- **Plugins panel — compact-empty layout** ([`molecule-core` #2978](https://github.com/Molecule-AI/molecule-core/pull/2978)): the canvas Plugins section defaulted to its full vertical layout even when no plugins were installed, eating screen real-estate on every fresh workspace. Compact-empty rendering now collapses the section header + a single "Browse the Marketplace" affordance instead. Closes [#2971](https://github.com/Molecule-AI/molecule-core/issues/2971).
+- **Auto-promote-staging stale-block alarm** ([`molecule-core` #2983](https://github.com/Molecule-AI/molecule-core/pull/2983)): hourly check on the open `staging → main` auto-promote PR — fires a loud workflow failure when it's been blocked on `REVIEW_REQUIRED` for >4h. Caught the silent-25-commit-block from earlier today (Memory v2 + reno-stars fix sat on staging while main was 25 commits behind because no human had approved the auto-promote PR). Closes [#2975](https://github.com/Molecule-AI/molecule-core/issues/2975).
+
+### 📚 Late-day docs
+
+- **`resolveAttachmentHref` + `isPlatformAttachment` regression tests** ([`molecule-core` #2980](https://github.com/Molecule-AI/molecule-core/pull/2980)): the earlier #2968 fix shipped on prod-impact with manual verification; #2980 closes [#2973](https://github.com/Molecule-AI/molecule-core/issues/2973) by adding 15 unit tests including the cross-workspace-forwarding pin and the auth-leak negative case for the SSOT helper.
+
 ---
 ## 2026-05-04
 

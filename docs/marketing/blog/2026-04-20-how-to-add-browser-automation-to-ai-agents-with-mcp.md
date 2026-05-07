@@ -237,4 +237,4 @@ Once your agent is connected to MCP, it stops being a chatbot with a scrollable 
 
 ---
 
-*Have questions or want to share what you're building with MCP? Open a discussion on [GitHub Discussions](https://github.com/Molecule-AI/molecule-core/discussions) or file an issue with the `enhancement` label.*
+*Have questions or want to share what you're building with MCP? File an issue with the `enhancement` label on the [molecule-core issue tracker](https://git.moleculesai.app/molecule-ai/molecule-core/issues).*

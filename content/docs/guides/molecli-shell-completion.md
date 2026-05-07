@@ -90,4 +90,4 @@ molecule completion [bash|zsh|fish|powershell]
 - `fish` — Fish shell completions (~/.config/fish/completions)
 - `powershell` — PowerShell completions ($PROFILE)
 
-See [`molecule-cli` PR #5](https://github.com/Molecule-AI/molecule-cli/pull/5) for implementation details.
+See [`molecule-cli` PR #5](https://git.moleculesai.app/molecule-ai/molecule-cli/pull/5) for implementation details.

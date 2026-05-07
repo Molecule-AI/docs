@@ -165,14 +165,14 @@ ticket if a future revival of this BFG procedure is needed.
 
 **Step 2 — Clean origin/main:**
 ```bash
-git clone --mirror https://github.com/Molecule-AI/molecule-core /tmp/molecule-main-mirror
+git clone --mirror https://git.moleculesai.app/molecule-ai/molecule-core /tmp/molecule-main-mirror
 java -jar bfgr.jar --replace-text creds.txt --rewrite-not-committed-by-oss --no-blob-protection /tmp/molecule-main-mirror
 cd /tmp/molecule-main-mirror && git push --mirror
 ```
 
 **Step 3 — Clean origin/staging:**
 ```bash
-git clone --mirror https://github.com/Molecule-AI/molecule-core /tmp/molecule-staging-mirror
+git clone --mirror https://git.moleculesai.app/molecule-ai/molecule-core /tmp/molecule-staging-mirror
 java -jar bfgr.jar --replace-text creds.txt --rewrite-not-committed-by-oss --no-blob-protection /tmp/molecule-staging-mirror
 cd /tmp/molecule-staging-mirror && git push --mirror
 ```
@@ -584,7 +584,7 @@ Core-BE — delegated to Dev Lead (A2A failed). Core-BE sub-team: please pick up
 
 ### Fix PR
 
-[PR #1336](https://github.com/Molecule-AI/molecule-core/pull/1336) filed — `fix(orchestrator): fail-fast if WORKSPACE_ID env var is unset/empty`. Targets staging. Labels: bug, needs-work, area:backend-engineer, area:dev-lead.
+[PR #1336](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1336) filed — `fix(orchestrator): fail-fast if WORKSPACE_ID env var is unset/empty`. Targets staging. Labels: bug, needs-work, area:backend-engineer, area:dev-lead.
 
 ---
 

@@ -12,7 +12,7 @@ This page documents security fixes shipped in the Molecule AI platform. Each ent
 ## 2026-04-20 — CWE-22: Path Traversal in `copyFilesToContainer`
 
 **Severity:** High (CWE-22)
-**PRs:** [#1271](https://github.com/Molecule-AI/molecule-core/pull/1271), [#1270](https://github.com/Molecule-AI/molecule-core/pull/1270), [#1267](https://github.com/Molecule-AI/molecule-core/pull/1267)
+**PRs:** [#1271](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1271), [#1270](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1270), [#1267](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1267)
 **Affected:** `workspace-server/internal/handlers/container_files.go` — `TemplatesHandler.copyFilesToContainer`
 
 ### Vulnerability
@@ -37,7 +37,7 @@ File writes to workspace containers now validate all paths before writing to the
 ## 2026-04-20 — CWE-78: Shell Injection in `deleteViaEphemeral`
 
 **Severity:** High (CWE-78)
-**PR:** [#1310](https://github.com/Molecule-AI/molecule-core/pull/1310)
+**PR:** [#1310](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1310)
 **Affected:** `workspace-server/internal/handlers/container_files.go` — `TemplatesHandler.deleteViaEphemeral`
 
 ### Vulnerability
@@ -69,9 +69,9 @@ Workspace file deletion operations now use safe argument-passing and validate al
 ## 2026-04-21 — CWE-918: SSRF in MCP / A2A Proxy Endpoints (Updated: Regression Fix)
 
 **Severity:** High (CWE-918)
-**Original PRs:** [#1274](https://github.com/Molecule-AI/molecule-core/pull/1274), [#1302](https://github.com/Molecule-AI/molecule-core/pull/1302)
-**Regression Fix PR:** [#1430](https://github.com/Molecule-AI/molecule-core/pull/1430)
-**Regression introduced by:** [#1363](https://github.com/Molecule-AI/molecule-core/pull/1363)
+**Original PRs:** [#1274](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1274), [#1302](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1302)
+**Regression Fix PR:** [#1430](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1430)
+**Regression introduced by:** [#1363](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1363)
 **Affected:** `workspace-server/internal/handlers/mcp.go` — `isSafeURL`, `isPrivateOrMetadataIP`; `workspace-server/internal/handlers/a2a_proxy.go`; `workspace-server/internal/handlers/a2a_proxy_helpers.go`
 
 ### Vulnerability
@@ -105,9 +105,9 @@ In **SaaS mode** (`saasMode()` returns true), cross-EC2 traffic to RFC-1918 addr
 
 ### Regression (2026-04-21)
 
-PR [#1363](https://github.com/Molecule-AI/molecule-core/pull/1363) (handler refactor) moved `isPrivateOrMetadataIP` into `a2a_proxy_helpers.go` but kept a **pre-SaaS version** that unconditionally blocked RFC-1918 addresses, breaking cross-EC2 communication in SaaS. The old version also **returned `false` for all IPv6 inputs**, fully bypassing SSRF protection for IPv6 targets.
+PR [#1363](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1363) (handler refactor) moved `isPrivateOrMetadataIP` into `a2a_proxy_helpers.go` but kept a **pre-SaaS version** that unconditionally blocked RFC-1918 addresses, breaking cross-EC2 communication in SaaS. The old version also **returned `false` for all IPv6 inputs**, fully bypassing SSRF protection for IPv6 targets.
 
-PR [#1430](https://github.com/Molecule-AI/molecule-core/pull/1430) restores the correct SaaS-gated logic and adds proper IPv6 coverage to the A2A proxy path.
+PR [#1430](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1430) restores the correct SaaS-gated logic and adds proper IPv6 coverage to the A2A proxy path.
 
 ### User-facing summary
 
@@ -118,7 +118,7 @@ Platform outbound requests from workspaces (MCP tool calls, A2A proxy routing) v
 ## 2026-04-21 — Audit Ledger HMAC Chain Guard
 
 **Severity:** Low (denial-of-service / data integrity)
-**PRs:** [#1339](https://github.com/Molecule-AI/molecule-core/pull/1339), [#1352](https://github.com/Molecule-AI/molecule-core/pull/1352), [#1354](https://github.com/Molecule-AI/molecule-core/pull/1354) (backport to `main`)
+**PRs:** [#1339](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1339), [#1352](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1352), [#1354](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1354) (backport to `main`)
 **Affected:** `workspace-server/internal/handlers/audit.go`
 
 ### Vulnerability
@@ -144,7 +144,7 @@ Audit chain verification now handles short or malformed HMAC values gracefully, 
 ## 2026-04-21 — Credential Scrub: `err.Error()` Leak Prevention
 
 **Severity:** Medium (information disclosure)
-**PRs:** [#1282](https://github.com/Molecule-AI/molecule-core/pull/1282), [#1355](https://github.com/Molecule-AI/molecule-core/pull/1355), [#1359](https://github.com/Molecule-AI/molecule-core/pull/1359)
+**PRs:** [#1282](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1282), [#1355](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1355), [#1359](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1359)
 **Affected:** `workspace-server/internal/handlers/plugins_install_pipeline.go`, `workspace-server/internal/handlers/workspace_provision.go`, `content/docs/incidents/INCIDENT_LOG.md`
 
 ### Vulnerability

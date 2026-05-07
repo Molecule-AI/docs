@@ -78,7 +78,7 @@ Every log entry automatically includes MCP request context (tool name, request I
 
 Set `LOG_LEVEL=debug` (level 20) to trace all tool calls and request IDs. Set `LOG_LEVEL=error` (level 50) in CI to suppress informational output.
 
-See [`molecule-mcp-server` PR #6](https://github.com/Molecule-AI/molecule-mcp-server/pull/6) for implementation details.
+See [`molecule-mcp-server` PR #6](https://git.moleculesai.app/molecule-ai/molecule-mcp-server/pull/6) for implementation details.
 
 ## Tool Reference
 

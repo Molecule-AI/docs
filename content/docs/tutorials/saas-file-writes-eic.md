@@ -145,7 +145,7 @@ Key push + tunnel + write took longer than 30 s. Common causes: slow AWS EIC in 
 
 ## Source PR
 
-PR [#1702](https://github.com/Molecule-AI/molecule-core/pull/1702) — `feat(files-api): SSH-backed write for SaaS workspaces (fixes 500 docker not available)`
+PR [#1702](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1702) — `feat(files-api): SSH-backed write for SaaS workspaces (fixes 500 docker not available)`
 
 Key files in `molecule-core`:
 - `workspace-server/internal/handlers/template_files_eic.go` — EIC write logic

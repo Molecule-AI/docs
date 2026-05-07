@@ -246,4 +246,4 @@ For the API reference, see [`docs/api-reference`](/docs/api-reference) — the `
 
 *SaaS federation is available for all Molecule AI platform operators. Contact the Molecule AI team to enable federation on your control plane.*
 
-(`molecule-core` [#1700](https://github.com/Molecule-AI/molecule-core/pull/1700))
+(`molecule-core` [#1700](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1700))

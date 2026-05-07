@@ -274,7 +274,7 @@ MCP config and restart your runtime.
 
 ### `Workspace <id> was deleted on the platform...` from `get_workspace_info`
 
-Since [#2429](https://github.com/Molecule-AI/molecule-core/pull/2449),
+Since [#2429](https://git.moleculesai.app/molecule-ai/molecule-core/pull/2449),
 `GET /workspaces/:id` returns **410 Gone** (not 200 + `status:"removed"`)
 when the workspace has been deleted. The MCP wheel's `get_workspace_info`
 tool surfaces this as a tailored error message:

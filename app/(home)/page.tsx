@@ -18,10 +18,10 @@ export default function HomePage() {
           Read the docs
         </Link>
         <Link
-          href="https://github.com/Molecule-AI/molecule-monorepo"
+          href="https://git.moleculesai.app/molecule-ai/molecule-core"
           className="rounded-md border border-fd-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-fd-muted"
         >
-          View on GitHub
+          View on Gitea
         </Link>
       </div>
     </main>

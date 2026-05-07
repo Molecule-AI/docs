@@ -11,7 +11,7 @@ Get a Molecule AI workspace running in under five minutes.
 ## 1. Install Molecule AI
 
 ```bash
-git clone https://github.com/Molecule-AI/molecule-core.git
+git clone https://git.moleculesai.app/molecule-ai/molecule-core.git
 cd molecule-core
 docker compose up -d
 ```
@@ -78,4 +78,4 @@ Or type `/ask what's our deployment status?` in your connected Discord channel.
 - [Review the REST API reference](/docs/guides/org-api-keys)
 - [Browse all guides](/docs/guides)
 
-Explore the [GitHub repo](https://github.com/Molecule-AI/molecule-core) for self-hosting options, or visit [moleculesai.app](https://moleculesai.app) for the hosted platform.
+Explore the [Gitea repo](https://git.moleculesai.app/molecule-ai/molecule-core) for self-hosting options, or visit [moleculesai.app](https://moleculesai.app) for the hosted platform.

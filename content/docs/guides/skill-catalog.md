@@ -65,7 +65,7 @@ molecule skills install arxiv-research --from community
 
 Community skills are reviewed by the Molecule AI team before being
 listed. Submit a skill for review by opening a PR against
-[`molecule-ai/skills`](https://github.com/Molecule-AI/skills).
+`molecule-ai/skills` (repo location TBD post-2026-05-06 GitHub-org-suspension; check the [internal issue tracker](https://git.moleculesai.app/molecule-ai/internal/issues) for the canonical submission path).
 
 ## Installing via config.yaml
 
@@ -171,7 +171,7 @@ molecule skills bundle my-custom-skill --output ./org-templates/my-role/
 ```
 
 **Publishing to the community:** Open a PR against
-[`molecule-ai/skills`](https://github.com/Molecule-AI/skills) with a
+`molecule-ai/skills` (repo location TBD post-2026-05-06 GitHub-org-suspension; check the [internal issue tracker](https://git.moleculesai.app/molecule-ai/internal/issues) for the canonical submission path) with a
 complete skill package. Community skills are reviewed for security and
 correctness before listing.
 

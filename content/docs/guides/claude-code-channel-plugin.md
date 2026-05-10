@@ -7,7 +7,7 @@ description: "Bridge Molecule A2A traffic into a running Claude Code session via
 
 Run [Claude Code](https://claude.com/claude-code) on your laptop and have it appear on the Molecule AI canvas as a first-class external workspace. Inbound A2A messages from peer workspaces surface as conversation turns; replies route back through Molecule's A2A endpoints.
 
-> **What this is:** [`Molecule-AI/molecule-mcp-claude-channel`](https://github.com/Molecule-AI/molecule-mcp-claude-channel) — an MCP-based "channel plugin" that turns a Claude Code session into a Molecule workspace.
+> **What this is:** [`molecule-mcp-claude-channel`](https://git.moleculesai.app/molecule-ai/molecule-mcp-claude-channel) — an MCP-based "channel plugin" that turns a Claude Code session into a Molecule workspace.
 
 > **What this is NOT:** the [Python SDK / curl register flow](/docs/guides/external-agent-registration) for arbitrary HTTP-speaking agents. That flow needs a public URL the platform can POST to. This one polls — runs on any laptop behind any NAT.
 
@@ -84,7 +84,7 @@ Replace the token placeholder with the workspace bearer from Step 1.
 ## Step 3 — Launch Claude Code
 
 ```bash
-claude --channels plugin:molecule@Molecule-AI/molecule-mcp-claude-channel
+claude --channels plugin:molecule@molecule-ai/molecule-mcp-claude-channel
 ```
 
 You should see on stderr (use `--debug` to surface):
@@ -199,7 +199,7 @@ curl -fsS "$MOLECULE_PLATFORM_URL/workspaces/$WS_ID/activity?type=a2a_receive&li
   -H "Authorization: Bearer $WS_TOKEN" | jq
 ```
 
-If that returns events but Claude doesn't see them, file an issue at [`Molecule-AI/molecule-mcp-claude-channel`](https://github.com/Molecule-AI/molecule-mcp-claude-channel/issues) with the workspace_id + sample event.
+If that returns events but Claude doesn't see them, file an issue at [`molecule-mcp-claude-channel`](https://git.moleculesai.app/molecule-ai/molecule-mcp-claude-channel/issues) with the workspace_id + sample event.
 
 ---
 
@@ -210,7 +210,7 @@ If that returns events but Claude doesn't see them, file an issue at [`Molecule-
 - **No file-attachment download.** URLs surface in the meta block; the host fetches on-demand.
 - **No outbound channel-init.** The plugin only sends replies (in response to inbound A2A); starting a fresh A2A conversation initiated FROM the Claude Code side requires a future `start_workspace_chat` tool.
 
-Track the v0.2 roadmap on the [plugin repo's README](https://github.com/Molecule-AI/molecule-mcp-claude-channel#limitations-v01).
+Track the v0.2 roadmap on the [plugin repo's README](https://git.moleculesai.app/molecule-ai/molecule-mcp-claude-channel#limitations-v01).
 
 ---
 
@@ -219,4 +219,4 @@ Track the v0.2 roadmap on the [plugin repo's README](https://github.com/Molecule
 - [External Agent Registration](/docs/guides/external-agent-registration) — full A2A wire-shape reference + Python SDK + curl flow
 - [External Workspace Quickstart](/docs/guides/external-workspace-quickstart) — 5-min guide for any HTTP-speaking agent
 - [Remote Workspaces FAQ](/docs/guides/remote-workspaces-faq) — production hardening notes
-- [`Molecule-AI/molecule-mcp-claude-channel`](https://github.com/Molecule-AI/molecule-mcp-claude-channel) — plugin source code, issues, v0.2 roadmap
+- [`molecule-mcp-claude-channel`](https://git.moleculesai.app/molecule-ai/molecule-mcp-claude-channel) — plugin source code, issues, v0.2 roadmap

@@ -192,6 +192,22 @@ Each inbound message carries these fields in addition to the standard A2A fields
 
 > **Note:** `peer_name`, `peer_role`, and `agent_card_url` are enriched from the platform's peer registry at dispatch time. They are `None` if the sending peer has not registered an agent card.
 
+### Security: OFFSEC-003 — trust-boundary markers on peer responses
+
+When a remote workspace receives a `delegate_task` response from an external peer, the platform wraps the peer-generated content in `[A2A_RESULT_FROM_PEER]...[/A2A_RESULT_FROM_PEER]` trust-boundary markers. These markers signal to the agent that the enclosed content originated outside the platform's trust boundary and must not be re-injected as platform-native output.
+
+Use `strip_a2a_boundary()` to strip the wrappers before processing the content:
+
+```python
+from molecule_agent import RemoteAgentClient, strip_a2a_boundary
+
+# Normalise inbound peer result — safe on pre-OFFSEC-003 responses (returns
+# input unchanged when markers absent) and on None/empty strings.
+result = strip_a2a_boundary(msg.params.get("result", ""))
+```
+
+This is particularly important when displaying peer results to users or using them as tool inputs — always strip the boundary markers first. See `molecule-core` [#334](https://git.moleculesai.app/molecule-ai/molecule-core/pull/334) for the platform-side implementation.
+
 ---
 
 ## What Phase 30 Covers

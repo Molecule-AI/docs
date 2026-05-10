@@ -1,0 +1,214 @@
+---
+title: "a2a-sdk v0 → v1 migration"
+description: "Cheat sheet for migrating workspace runtime code (and forks) from a2a-sdk 0.3.x to 1.x — renamed/removed symbols, common error shapes, before/after diffs."
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The `a2a-sdk` Python package released v1.0 in late April 2026. The
+Molecule workspace runtime migrated under tracking ID **KI-009** and
+shipped in `molecule-ai-workspace-runtime` **v0.1.11** (commit
+`d5cf872`, PR #39). The platform now runs exclusively on v1.
+
+If you're consuming the platform's published wheel, bumping
+`molecule-ai-workspace-runtime>=0.1.11` handles the migration for
+you. If you maintain a fork of the runtime, an external agent talking
+A2A directly, or your own adapter that imports from `a2a.*`, this page
+is your checklist.
+
+## Why migrate
+
+- **Upstream**: `a2a-sdk` 1.0 reorganised the import surface, flattened
+  `Part`, removed deprecated capability flags, and replaced the
+  `A2AStarletteApplication` wrapper with explicit Starlette route
+  factories.
+- **Platform**: as of 2026-04-24 the platform sends/receives via v1
+  shapes natively. The SDK ships a v0_3 compat layer (enabled in the
+  runtime via `enable_v0_3_compat=True` on `create_jsonrpc_routes`) so
+  in-flight 0.x callers don't break, but new code should target v1.
+- **Forks/external runtimes**: v0 code throws on `import a2a.utils`
+  and `from a2a.server.apps import A2AStarletteApplication` once you
+  install v1, so the migration is a hard cutover at install time, not
+  a soft deprecation.
+
+## Cheat sheet — renamed and removed symbols
+
+The four breaking changes that hit the Molecule runtime during KI-009.
+All four are confirmed against
+`/Users/hongming/Documents/GitHub/molecule-monorepo/workspace/` source.
+
+### 1. `new_agent_text_message` renamed to `new_text_message`
+
+- **v0 location**: `a2a.utils.new_agent_text_message`
+- **v1 location**: `a2a.helpers.new_text_message`
+
+Both the module path and the symbol name changed.
+
+### 2. `Part` API flattened — `TextPart` removed
+
+- **v0**: `Part(root=TextPart(text="..."))` — `Part` wrapped a `root`
+  union of `TextPart` / `FilePart` / `DataPart`.
+- **v1**: `Part(text="...")` — `Part` accepts the text payload
+  directly. `TextPart` no longer exists as a public symbol.
+
+`FilePart` / `DataPart` are similarly flattened (`Part(file=...)`,
+`Part(data=...)`); the Molecule runtime only emits text parts so the
+file/data shapes weren't exercised in KI-009 and aren't covered by
+this guide.
+
+### 3. `A2AStarletteApplication` removed — use route factories
+
+- **v0**: `from a2a.server.apps import A2AStarletteApplication` then
+  `A2AStarletteApplication(agent_card, request_handler).build()`.
+- **v1**: `from a2a.server.routes import create_agent_card_routes,
+  create_jsonrpc_routes` then build a Starlette app from the returned
+  route lists.
+
+The factories also let you mount the JSON-RPC endpoint at any path
+(the runtime mounts at `/` because the platform POSTs to root, see
+`workspace/main.py:279`).
+
+### 4. `state_transition_history` capability flag removed
+
+- **v0**: `AgentCapabilities(streaming=..., push_notifications=...,
+  state_transition_history=True)` was a per-agent opt-in.
+- **v1**: the field is gone from `AgentCapabilities`. Per the SDK's own
+  `a2a/compat/v0_3/conversions.py`: *"No longer supported in v1.0"*.
+  The capability is now universal — `Task.history` is always available
+  and `tasks/get` accepts `historyLength` via `apply_history_length()`.
+
+If you pass `state_transition_history=...` as a kwarg to
+`AgentCapabilities` under v1, Pydantic will reject it. Drop the kwarg.
+See [`workspace/main.py:215`](https://github.com/Molecule-AI/molecule-monorepo/blob/main/workspace/main.py#L215)
+for the explanatory comment that prevents future accidental re-adds.
+
+## Common error shapes
+
+When v0 code runs against the v1 SDK, the failure modes look like this:
+
+| Error | Cause |
+|---|---|
+| `ModuleNotFoundError: No module named 'a2a.utils'` | v0 import path; module renamed to `a2a.helpers`. |
+| `ImportError: cannot import name 'A2AStarletteApplication' from 'a2a.server.apps'` | The whole `a2a.server.apps` module is gone in v1. Switch to `a2a.server.routes` factories. |
+| `ImportError: cannot import name 'TextPart' from 'a2a.types'` | Flattened `Part` API; use `Part(text=...)`. |
+| `ValueError: Protocol message AgentCapabilities has no "state_transition_history" field` | Removed capability flag passed as kwarg; drop it. |
+| `ValueError: Protocol message Part has no "root" field` | v0 `Part(root=TextPart(...))` shape against v1 schema; flatten to `Part(text=...)`. |
+
+The protobuf-style `ValueError` messages always follow the pattern
+`Protocol message <Type> has no "<field>" field` — that's the
+fingerprint of "v0 shape against v1 schema." Treat it as a v0→v1 hint
+even if the field name isn't on the cheat sheet above.
+
+## Migration checklist
+
+1. **Bump the dep** — `a2a-sdk[http-server]>=0.3.25` is the floor; remove
+   any `<1.0` upper bound. The Molecule wheel uses
+   `a2a-sdk[http-server]>=0.3.25` with no upper bound (see
+   [`molecule-ai-workspace-runtime/pyproject.toml`](https://github.com/Molecule-AI/molecule-ai-workspace-runtime/blob/main/pyproject.toml)).
+2. **Fix imports** — sweep the four renamed/removed symbols above. A
+   safe grep is `grep -rn "from a2a\\|import a2a"` across your tree.
+3. **Fix removed-field reads/writes** — search for
+   `state_transition_history` usage and delete the kwarg/field access.
+4. **Flatten `Part` constructors** — search for `Part(root=` and
+   convert to `Part(text=...)` / `Part(file=...)` / `Part(data=...)`.
+5. **Replace the app factory** — search for `A2AStarletteApplication`
+   and rewrite the bootstrap using `create_agent_card_routes` +
+   `create_jsonrpc_routes`. Pass `enable_v0_3_compat=True` to
+   `create_jsonrpc_routes` if your peers may still be on v0.
+6. **Re-run tests** — fixture-level mocks of `a2a.helpers` /
+   `a2a.utils` need to mock both names so tests still pass during the
+   rename rollout (see
+   [`workspace/tests/conftest.py:105-111`](https://github.com/Molecule-AI/molecule-monorepo/blob/main/workspace/tests/conftest.py#L105-L111)
+   for the dual-name pattern).
+
+## Before / after diffs
+
+### `new_agent_text_message` → `new_text_message`
+
+```diff
+-from a2a.utils import new_agent_text_message
++from a2a.helpers import new_text_message
+
+ async def execute(self, context, event_queue):
+-    await event_queue.enqueue_event(new_agent_text_message("hello"))
++    await event_queue.enqueue_event(new_text_message("hello"))
+```
+
+### Flat `Part` API
+
+```diff
+-from a2a.types import Part, TextPart
++from a2a.types import Part
+
+-msg_parts = [Part(root=TextPart(text=final_text))]
++msg_parts = [Part(text=final_text)]
+```
+
+### `AgentCapabilities` — drop `state_transition_history`
+
+```diff
+ capabilities=AgentCapabilities(
+     streaming=config.a2a.streaming,
+     push_notifications=config.a2a.push_notifications,
+-    state_transition_history=True,
+ ),
+```
+
+### `A2AStarletteApplication` → route factories
+
+```diff
+-from a2a.server.apps import A2AStarletteApplication
++from a2a.server.routes import create_agent_card_routes, create_jsonrpc_routes
+
+-app = A2AStarletteApplication(
+-    agent_card=agent_card,
+-    http_handler=request_handler,
+-).build()
++routes = []
++routes.extend(create_agent_card_routes(agent_card))
++routes.extend(create_jsonrpc_routes(
++    request_handler=request_handler,
++    rpc_url="/",
++    enable_v0_3_compat=True,
++))
++app = Starlette(routes=routes)
+```
+
+The `enable_v0_3_compat=True` flag on `create_jsonrpc_routes` is what
+keeps in-flight v0 callers (peers that haven't migrated yet) from
+breaking — it accepts the old method names and translates them. The
+Molecule runtime ships with this flag on (see
+[`workspace/main.py:279`](https://github.com/Molecule-AI/molecule-monorepo/blob/main/workspace/main.py#L279));
+strip it once your entire fleet is on v1.
+
+## For downstream consumers
+
+- **Using the published wheel** (`pip install
+  molecule-ai-workspace-runtime>=0.1.11`): the migration is in the
+  wheel — no code changes needed in your adapter or workspace template
+  beyond bumping the pin.
+- **Running a fork of the runtime**: cherry-pick or rebase against
+  commit `d5cf872` ("feat: migrate a2a-sdk 1.x (KI-009) (#39)") in
+  `molecule-ai-workspace-runtime`. The diff is the canonical reference
+  for what KI-009 actually changed.
+- **Standalone external agent** (talking A2A without the wheel): apply
+  the [Migration checklist](#migration-checklist) directly to your
+  source. The four cheat-sheet items are the entire surface that
+  changed for the typical agent role; only `Part` flattening and the
+  `state_transition_history` removal affect on-the-wire shapes — the
+  other two are import-only.
+
+<Callout type="info">
+The wheel keeps `enable_v0_3_compat=True` on `create_jsonrpc_routes`,
+so a v0 peer can still hit a v1 wheel and vice versa during the
+migration window. You don't need to coordinate a fleet-wide cutover —
+migrate at your own pace.
+</Callout>
+
+## See also
+
+- [`molecule-ai-workspace-runtime` v0.1.11 release](https://github.com/Molecule-AI/molecule-ai-workspace-runtime/releases/tag/v0.1.11) — first wheel containing KI-009
+- [PR #39 — feat: migrate a2a-sdk 1.x (KI-009)](https://github.com/Molecule-AI/molecule-ai-workspace-runtime/pull/39)
+- [PR #48 — feat(a2a): dual-compat for a2a-sdk 0.3.x and 1.x](https://github.com/Molecule-AI/molecule-ai-workspace-runtime/pull/48) — runtime-side compat shim that keeps v0 peers working against the v1 wheel
+- [Bring Your Own Runtime (MCP)](/docs/runtime-mcp) — universal wheel install path
+- [External Agents](/docs/external-agents) — manual A2A path for non-MCP runtimes

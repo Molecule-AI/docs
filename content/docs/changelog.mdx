@@ -7,6 +7,44 @@ All notable changes to the Molecule AI platform are documented here.
 Entries are published daily at 23:50 UTC.
 
 ---
+## 2026-05-07
+
+### 🧹 Internal
+
+- **Post-suspension URL migration** — all `github.com/Molecule-AI` references migrated to `git.moleculesai.app` across docs, blog, and install paths. Git clone URLs, doc links, and API documentation updated. (`docs` [#37](https://git.moleculesai.app/molecule-ai/docs/pull/37))
+- **CI switch to ubuntu-latest** — GitHub Actions workflows updated to `ubuntu-latest` now that the repo is public. (`docs` [#4](https://git.moleculesai.app/molecule-ai/docs/pull/4))
+
+---
+## 2026-04-30
+
+### 📚 Docs
+
+- **Universal MCP runtime** — full "Bring Your Own Runtime (MCP)" page covering the `molecule-mcp` wheel, setup walkthrough, Claude Code / hermes / opencode / Cursor / Cline configuration, `workspaceId` → `X-Molecule-Workspace-ID` header migration, and dual-transport (Streamable HTTP + SSE). (`docs` [#100](https://git.moleculesai.app/molecule-ai/docs/pull/100))
+- **Runtime MCP push-UX + troubleshooting** — documents the dual push/poll inbound delivery contract, `wait_for_message` standalone-runtime loop, containerised runtime push delivery, common failure modes (stale endpoint, auth mismatch, duplicate delivery), and the polling fallback path. (`docs` [#102](https://git.moleculesai.app/molecule-ai/docs/pull/102))
+- **Runtime MCP spec compliance** — documents MCP 2024-11-05 spec compliance: `initialize` / `notifications/initialized`, `tools/list` filtering, `tools/call` round-trip, ` Roots` vs `workspace/roots` distinction, and `SamplingMessage` / `CancelMessage` backward-compat. (`docs` [#103](https://git.moleculesai.app/molecule-ai/docs/pull/103))
+- **Agent card env vars** — documents `MOLECULE_AGENT_NAME`, `MOLECULE_AGENT_DESCRIPTION`, and `MOLECULE_AGENT_SKILLS` — the three env vars injected into every workspace container for peer-discovery and canvas display. (`docs` [#101](https://git.moleculesai.app/molecule-ai/docs/pull/101))
+- **410 Gone for removed workspaces** — documents the new `410 Gone` response when calling `GET /workspaces/:id` or any sub-route on a workspace that was soft-deleted and not recovered within the grace period. (`docs` [#104](https://git.moleculesai.app/molecule-ai/docs/pull/104))
+
+### 🔧 Fixes
+
+- **Secret-scan false positives suppressed** — F1088 token scrub logic fixed to avoid flagging legitimate content as leaked credentials. (`docs` [#96](https://git.moleculesai.app/molecule-ai/docs/pull/96))
+
+---
+## 2026-04-26
+
+### 🔒 Security
+
+- **F1088 incident closure** — full token values redacted from the incident log. Org-wide `secret-scan` reusable workflow enrolled (`Molecule-AI/molecule-core` [#2109](https://git.moleculesai.app/molecule-ai/molecule-core/pull/2109)) — all repos now lint every push for exposed credentials.
+
+### ✨ New features
+
+- **Blog post: "Why You Need a Team of AI Agents, Not One Genius Model"** — published to the blog section of the docs site. Covers the architectural rationale for multi-agent orgs vs single-agent approaches.
+
+### 🧹 Internal
+
+- **Auto-promote staging workflow** — new GitHub Actions workflow (`docs/auto-promote-staging.yml`) automatically merges `main` into `staging` on every push, restoring the staging-as-superset invariant. Runs on self-hosted runner; skips if already up-to-date or if the branch is ahead.
+
+---
 ## 2026-04-23
 
 ### ✨ New features

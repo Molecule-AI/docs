@@ -75,6 +75,109 @@ Entries are published daily at 23:50 UTC.
 ---
 
 
+
+
+
+
+## 2026-05-10
+
+### ✨ New features
+
+- **A2A priority queue — Phase 1**: task dispatch now supports a `priority` field (`low` / `normal` / `high` / `urgent`). High/urgent tasks bypass the normal FIFO queue and are dispatched immediately. (`molecule-core` [#225](https://git.moleculesai.app/molecule-ai/molecule-core/pull/225))
+- **Plugin drift detector + queue + admin apply endpoint**: a new plugin drift detection system monitors loaded plugins against their pinned SHAs and surfaces drift via a queue; admins can review and apply corrections via a new `/admin/plugin-apply` endpoint. (`molecule-core` [#204](https://git.moleculesai.app/molecule-ai/molecule-core/pull/204))
+- **workspace-server pre-restart A2A drain signal**: the workspace-server now sends a pre-restart A2A drain signal before restarting, allowing peer workspaces to gracefully drain pending tasks instead of timing out. (`molecule-core` [#207](https://git.moleculesai.app/molecule-ai/molecule-core/pull/207))
+- **Admin auth runbook**: new `admin-auth.md` runbook documents the test-token route lockdown and `AdminAuth` middleware behaviour for operators. (`molecule-core` [#220](https://git.moleculesai.app/molecule-ai/molecule-core/pull/220))
+- **Static `.github-token` fallback to git credential helper**: workspace-server now falls back to a static `.github-token` value when no git credential helper is configured, enabling simpler air-gapped setups. (`molecule-core` [#219](https://git.moleculesai.app/molecule-ai/molecule-core/pull/219))
+- **Keyboard shortcuts in Toolbar help dialog**: all keyboard shortcuts are now documented in a Toolbar help dialog accessible from the canvas top bar. (`molecule-core` [#244](https://git.moleculesai.app/molecule-ai/molecule-core/pull/244))
+
+### 🔧 Fixes
+
+- **SSRF validation before writing external workspace URL**: the workspace handler now validates URLs against SSRF allowlists before writing external workspace configurations. (`molecule-core` [#221](https://git.moleculesai.app/molecule-ai/molecule-core/pull/221))
+- **Dockerfile tenant chown /org-templates**: `/org-templates` directory now correctly chowned to the canvas user to fix `EACCES` on `mkdir` for external resolvers. (`molecule-core` [#223](https://git.moleculesai.app/molecule-ai/molecule-core/pull/223))
+- **CI `ghcr` → `ECR` migration + POST route smoke tests**: canary-verify workflow migrated from GHCR to ECR; new POST route smoke tests added for deployment verification. (`molecule-core` [#217](https://git.moleculesai.app/molecule-ai/molecule-core/pull/217))
+- **CI `dorny/paths-filter` → shell-based git diff**: replaced `dorny/paths-filter` with shell-based git diff for Gitea Actions compatibility. (`molecule-core` [#208](https://git.moleculesai.app/molecule-ai/molecule-core/pull/208))
+- **SOP tier-check clause splitter strips newlines**: the SOP tier-check script's clause splitter now correctly preserves newlines, fixing every `tier:low` PR CI failure. (`molecule-core` [#243](https://git.moleculesai.app/molecule-ai/molecule-core/pull/243))
+- **SOP tier-check APPROVER_TEAMS pattern matching**: outer quotes removed from case patterns in `APPROVER_TEAMS` matching logic, fixing approval team resolution. (`molecule-core` [#231](https://git.moleculesai.app/molecule-ai/molecule-core/pull/231))
+- **CI port `publish-workspace-server-image.yml` to `.gitea/workflows/`**: `publish-workspace-server-image.yml` migrated from `.github/workflows/` to `.gitea/workflows/` for Gitea Actions parity. (`molecule-core` [#237](https://git.moleculesai.app/molecule-ai/molecule-core/pull/237))
+- **CI port `publish-runtime.yml` to `.gitea/workflows/`**: `publish-runtime.yml` migrated from `.github/workflows/` to `.gitea/workflows/` for Gitea Actions parity. (`molecule-core` [#211](https://git.moleculesai.app/molecule-ai/molecule-core/pull/211))
+- **Docker base image digests pinned**: base image digests pinned in all Dockerfiles to ensure reproducible builds and prevent unexpected base image updates. (`molecule-core` [#199](https://git.moleculesai.app/molecule-ai/molecule-core/pull/199))
+- **KeyboardShortcutsDialog corrected**: keyboard shortcuts dialog text corrected and min-clamp test expectations fixed. (`molecule-core` [#200](https://git.moleculesai.app/molecule-ai/molecule-core/pull/200))
+
+### 📚 Docs
+
+- **Canvas known issues section cleaned up**: duplicate entries removed from known issues; pre-commit action link fixed. (`molecule-core` [#202](https://git.moleculesai.app/molecule-ai/molecule-core/pull/202))
+- **Canvas controls section corrected**: Canvas Controls section corrected to reflect current keyboard navigation and MiniMap state. (`molecule-core` [#201](https://git.moleculesai.app/molecule-ai/molecule-core/pull/201))
+
+### 🧹 Internal
+
+- **SOP tier-check AND-composition of required team approvals per tier**: tier-check now enforces AND-composition of required team approvals per tier (`tier:high`). (`molecule-core` [#225](https://git.moleculesai.app/molecule-ai/molecule-core/pull/225))
+- **Canvas structural tests for TIER_CONFIG and COMM_TYPE_LABELS**: structural tests added for canvas TIER_CONFIG and COMM_TYPE_LABELS constants. (`molecule-core` [#245](https://git.moleculesai.app/molecule-ai/molecule-core/pull/245))
+
+
+## 2026-05-09
+
+### ✨ New features
+
+- **Keyboard-accessible canvas node resize**: Cmd/Ctrl+Arrow keys now resize canvas nodes in the topology view, satisfying WCAG AA keyboard navigation requirements. (`molecule-core` [#192](https://git.moleculesai.app/molecule-ai/molecule-core/pull/192))
+- **Keyboard-accessible edge anchors**: Enter/Space on an edge now selects the anchor for keyboard-based topology editing. (`molecule-core` [#190](https://git.moleculesai.app/molecule-ai/molecule-core/pull/190))
+
+### 🔧 Fixes
+
+- **Handlers auto-restart workspace after file write/delete/replace**: file mutations via the Canvas editor now correctly trigger workspace restart, ensuring the agent picks up the new file state without manual intervention. (`molecule-core` [#188](https://git.moleculesai.app/molecule-ai/molecule-core/pull/188))
+- **CI `gh api` → Gitea API migration**: all GitHub Actions `gh api` calls replaced with Gitea-compatible alternatives — CI now runs cleanly in Gitea Actions without GitHub dependency. (`molecule-core` [#191](https://git.moleculesai.app/molecule-ai/molecule-core/pull/191))
+- **WCAG AA contrast fix + KeyboardShortcutsDialog improvements**: toolbar contrast ratios corrected for WCAG AA compliance; keyboard shortcuts dialog now scrolls properly on small viewports. (`molecule-core` [#198](https://git.moleculesai.app/molecule-ai/molecule-core/pull/198))
+
+### 📚 Docs
+
+- **Canvas accessibility audit — all gaps now closed**: the accessibility audit doc updated to reflect fully closed status. (`molecule-core` [#197](https://git.moleculesai.app/molecule-ai/molecule-core/pull/197))
+- **Canvas controls section corrected**: keyboard accessibility and MiniMap presence now correctly documented. (`molecule-core` [#201](https://git.moleculesai.app/molecule-ai/molecule-core/pull/201))
+- **Stale audit doc text fixed**: stale text from PR #182 corrected in canvas audit documentation. (`molecule-core` [#187](https://git.moleculesai.app/molecule-ai/molecule-core/pull/187))
+
+### 🧹 Internal
+
+- **gh-identity module path migration**: `github.com/Molecule-AI/gh-identity` imports migrated to `git.moleculesai.app/molecule-ai/gh-identity` across all workspace templates. (`molecule-core` [#189](https://git.moleculesai.app/molecule-ai/molecule-core/pull/189))
+- **Pending uploads test isolation fix**: sweeper test isolation corrected — eliminates cross-test pollution in CI. (`molecule-core` [#185](https://git.moleculesai.app/molecule-ai/molecule-core/pull/185))
+- **Poll error counter to 0 before assert**: RecordsMetricsOnSuccess now polls error counter to 0 before asserting, eliminating flaky E2E test failures. (`molecule-core` [#194](https://git.moleculesai.app/molecule-ai/molecule-core/pull/194))
+
+---
+
+## 2026-05-08
+
+### 🔧 Fixes
+
+- **molecule-app CI testTimeout bumped to 20s**: vitest `testTimeout` increased to 20 s to handle shared act_runner load on the molecule-app repo. (`molecule-app` [#4](https://git.moleculesai.app/molecule-ai/molecule-app/pull/4))
+- **molecule-app drops staging branch — trunk-based migration**: first repo of the trunk-based development migration; staging branch removed. (`molecule-app` [#3](https://git.moleculesai.app/molecule-ai/molecule-app/pull/3))
+- **docs CI switches to ubuntu-latest**: docs repo CI now uses `ubuntu-latest` now that the repo is public. (`docs` [#4](https://git.moleculesai.app/molecule-ai/docs/pull/4))
+
+---
+
+## 2026-05-07
+
+### 📚 Docs
+
+- **Install guide — GitHub.com refs → Gitea**: all active `github.com/Molecule-AI` references migrated to `git.moleculesai.app/molecule-ai` in the installation docs. (`docs` [#1](https://git.moleculesai.app/molecule-ai/docs/pull/1))
+- **Website github.com → Gitea link migration**: `molecules-market` website links updated to point at Gitea. (`landingpage` [#3](https://git.moleculesai.app/molecule-ai/landingpage/pull/3))
+- **molecule-monorepo → molecule-core rename (Phase 4)**: landingpage follow-up renaming of `molecule-monorepo` to `molecule-core` in all cross-repo references. (`landingpage` [#4](https://git.moleculesai.app/molecule-ai/landingpage/pull/4))
+- **CI lowercase 'molecule-ai/' in cross-repo workflow refs**: cross-repo workflow references now consistently lowercase for Gitea Actions compatibility. (`landingpage` [#2](https://git.moleculesai.app/molecule-ai/landingpage/pull/2))
+- **Market Purchase button on tier cards**: demo Mock #1 — Purchase button now appears on tier cards in the molecules-market. (`landingpage` [#5](https://git.moleculesai.app/molecule-ai/landingpage/pull/5))
+
+### 🔧 Fixes
+
+- **molecule-app runs-on ubuntu-latest**: Hetzner runner labels post-suspension; CI now uses `ubuntu-latest`. (`molecule-app` [#1](https://git.moleculesai.app/molecule-ai/molecule-app/pull/1))
+- **molecule-app GitHub → Gitea URL migration**: all `github.com/Molecule-AI` references migrated to `git.moleculesai.app/molecule-ai` in molecule-app. (`molecule-app` [#2](https://git.moleculesai.app/molecule-ai/molecule-app/pull/2))
+- **docs GitHub → Gitea URL migration**: `github.com/Molecule-AI` references migrated to Gitea across docs repo. (`docs` [#3](https://git.moleculesai.app/molecule-ai/docs/pull/3))
+
+---
+
+## 2026-05-06
+
+### 🧹 Internal
+
+- **molecule-core org-wide Gitea URL migration**: all `github.com/Molecule-AI` references migrated to `git.moleculesai.app/molecule-ai` across all repos in the org. (`molecule-core`)
+- **Hetzner act-runner suspension**: CI runners updated to use `ubuntu-latest` labels following Hetzner act-runner suspension. (`molecule-app` [#1](https://git.moleculesai.app/molecule-ai/molecule-app/pull/1))
+
+---
+
 ## 2026-04-22
 
 ### ✨ New features

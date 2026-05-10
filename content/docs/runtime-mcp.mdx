@@ -102,6 +102,22 @@ example above. Drop it into your client's MCP settings file
 (typically `~/.cursor/mcp.json` for Cursor, the MCP Servers panel for
 Cline) and restart the client.
 
+## Environment variables
+
+The following env vars are supported by the `molecule-mcp` wheel in addition to the
+required trio (`WORKSPACE_ID`, `PLATFORM_URL`, `MOLECULE_WORKSPACE_TOKEN`):
+
+| Env var | What it controls | Default |
+|---|---|---|
+| `MOLECULE_MODEL` | **Canonical.** The model ID the workspace runtime uses — e.g. `claude-opus-4-7`, `minimax/MiniMax-M2.7-highspeed` | _(unset — template default)_ |
+| `MODEL` | **Alias for `MOLECULE_MODEL`.** Accepted for backwards compatibility. | _(unset)_ |
+| `MODEL_PROVIDER` | **Deprecated.** This var was previously misread as "runtime selector" (`claude-code`, `minimax`, etc.) but carried the model ID, causing the wrong model to be used. Prefer `MOLECULE_MODEL`. | _(unset — emits deprecation warning)_ |
+| `MOLECULE_AGENT_SKILLS` | Comma-separated skill names — e.g. `research,code-review,memory-curation` | `[]` |
+
+<Callout type="warn">
+  `MODEL_PROVIDER` is deprecated. It was misnamed — despite its name it carried the **model ID** (e.g. `claude-opus-4-7`), not the runtime/provider name. Setting it caused production incidents where the Claude CLI received `--model MODEL_PROVIDER_VALUE` and returned 404s. Use `MOLECULE_MODEL` instead.
+</Callout>
+
 ## Optional — declare your identity & capabilities
 
 Three additional env vars control how your workspace appears on the
@@ -205,6 +221,38 @@ This means **any spec-compliant MCP client** can drive the wheel:
 Claude Code, Cursor, Cline, OpenCode, hermes-agent, or anything else
 that opens an MCP stdio connection. If your client speaks MCP, it
 speaks the wheel.
+
+## HTTP/SSE transport for Hermes workspaces
+
+Hermes workspaces (which are MCP-native) can connect to the platform MCP
+server over **HTTP + Server-Sent Events** instead of stdio. This is the
+recommended path when Hermes runs as a standalone service rather than
+inside a shell.
+
+The `a2a_mcp_server.py` in the runtime exposes two endpoints:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/mcp` | `POST` | Receive JSON-RPC requests |
+| `/mcp/stream` | `GET` | SSE stream for push-based responses |
+| `/health` | `GET` | Health check |
+
+Start the server with the `--transport=http --port=<N>` flags:
+
+```bash
+python a2a_mcp_server.py \
+  --transport=http \
+  --port=8080 \
+  --workspace-id=<uuid> \
+  --platform-url=https://<tenant>.moleculesai.app \
+  --workspace-token=<token>
+```
+
+<Callout type="info">
+  The stdio transport (described in [Step 2](#step-2--add-it-to-your-runtime))
+  remains the default. HTTP/SSE is an alternative for Hermes deployments
+  where a long-running daemon process is preferred over a stdio subprocess.
+</Callout>
 
 ## Heartbeat & lifecycle
 

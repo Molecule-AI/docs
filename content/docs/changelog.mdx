@@ -7,6 +7,155 @@ All notable changes to the Molecule AI platform are documented here.
 Entries are published daily at 23:50 UTC.
 
 ---
+## 2026-05-10
+
+### ✨ New features
+
+- **Plugin drift detector + queue + admin apply endpoint**: monitors installed plugins for upstream changes, queues notifications, and exposes an admin endpoint to review and apply updates across the fleet. (`molecule-core` [#204](https://git.moleculesai.app/molecule-ai/molecule-core/pull/204))
+- **Pre-restart A2A drain signal**: workspace-server now sends a drain signal to in-flight A2A requests before a restart, preventing orphaned delegations. (`molecule-core` [#207](https://git.moleculesai.app/molecule-ai/molecule-core/pull/207))
+- **Publish-runtime workflow ported to Gitea Actions**: the runtime publish workflow migrated from GitHub Actions to `.gitea/workflows/`. (`molecule-core` [#211](https://git.moleculesai.app/molecule-ai/molecule-core/pull/211))
+- **Static `.github-token` fallback for git credential helper**: workspace agents can now fall back to a static token when no interactive git credential is available. (`molecule-core` [#219](https://git.moleculesai.app/molecule-ai/molecule-core/pull/219))
+- **Keyboard shortcuts documented in Toolbar help dialog**: all canvas keyboard shortcuts now listed in an accessible help dialog triggered by `?`. (`molecule-core` [#244](https://git.moleculesai.app/molecule-ai/molecule-core/pull/244))
+
+### 🔧 Fixes
+
+- **KeyboardShortcutsDialog clamp fix + test expectation corrections**: correct boundary behavior for the shortcuts dialog and update test assertions that were failing on narrow viewports. (`molecule-core` [#200](https://git.moleculesai.app/molecule-ai/molecule-core/pull/200))
+- **Replace dorny/paths-filter with shell-based git diff**: Gitea Actions compatibility — path filtering now uses shell-based git diff instead of the GitHub-native action. (`molecule-core` [#208](https://git.moleculesai.app/molecule-ai/molecule-core/pull/208))
+- **Canary verify: GHCR → ECR + POST route smoke tests**: canary verification workflow switched to ECR and added smoke tests for POST routes. (`molecule-core` [#217](https://git.moleculesai.app/molecule-ai/molecule-core/pull/217))
+- **SSRF validation before writing external workspace URL**: external workspace URL writes now validate the URL for SSRF-safe domains before persisting. (`molecule-core` [#221](https://git.moleculesai.app/molecule-ai/molecule-core/pull/221))
+- **Dockerfile-tenant: chown /org-templates to canvas user**: fixes `EACCES` error during `!external` resolver mkdir call on SaaS tenants. (`molecule-core` [#223](https://git.moleculesai.app/molecule-ai/molecule-core/pull/223))
+- **SOP Tier Check: APPROVER_TEAMS pattern matching fix**: outer quotes stripped from case patterns — previously every `tier:low` PR failed approval. (`molecule-core` [#231](https://git.moleculesai.app/molecule-ai/molecule-core/pull/231))
+- **Publish-workspace-server-image ported to `.gitea/workflows/`**: workflow migrated from GitHub Actions to Gitea Actions. (`molecule-core` [#237](https://git.moleculesai.app/molecule-ai/molecule-core/pull/237))
+- **SOP Tier Check clause splitter strips newlines**: newline-stripping bug caused every `tier:low` PR to fail the check; fixed. (`molecule-core` [#243](https://git.moleculesai.app/molecule-ai/molecule-core/pull/243))
+
+### 🧹 Internal
+
+- **Pin base image digests in all Dockerfiles**: all Dockerfiles now pin base image digests for reproducibility. (`molecule-core` [#199](https://git.moleculesai.app/molecule-ai/molecule-core/pull/199))
+- **Canvas Controls section corrected**: keyboard accessibility and MiniMap presence documented correctly. (`molecule-core` [#201](https://git.moleculesai.app/molecule-ai/molecule-core/pull/201))
+- **Known Issues section cleaned up**: duplicate entry removed and pre-commit action fixed. (`molecule-core` [#202](https://git.moleculesai.app/molecule-ai/molecule-core/pull/202))
+- **Component tests added**: StatusDot, Tooltip, Legend, TermsGate, ApprovalBanner, ThemeToggle, BundleDropZone, OnboardingWizard, PurchaseSuccessModal, SearchDialog, ContextMenu, StatusBadge, ValidationHint, Spinner, RevealToggle, KeyValueField, TestConnectionButton, SettingsButton, TopBar. (`molecule-core` [#203](https://git.moleculesai.app/molecule-ai/molecule-core/pull/203), [#205](https://git.moleculesai.app/molecule-ai/molecule-core/pull/205), [#210](https://git.moleculesai.app/molecule-ai/molecule-core/pull/210), [#215](https://git.moleculesai.app/molecule-ai/molecule-core/pull/215), [#216](https://git.moleculesai.app/molecule-ai/molecule-core/pull/216), [#218](https://git.moleculesai.app/molecule-ai/molecule-core/pull/218), [#222](https://git.moleculesai.app/molecule-ai/molecule-core/pull/222), [#224](https://git.moleculesai.app/molecule-ai/molecule-core/pull/224))
+- **Pure-function tests added**: extractMessageText, providerIdForModel, runtimeProfiles, getIcon, createMessage, resolveRuntime, canvas-topology utilities, deriveWsBaseUrl, statusDotClass, readThemeCookie, parseYaml, toYaml, ColorToken → CSS mapping, TIER_CONFIG, COMM_TYPE_LABELS. (`molecule-core` [#227](https://git.moleculesai.app/molecule-ai/molecule-core/pull/227), [#233](https://git.moleculesai.app/molecule-ai/molecule-core/pull/233), [#235](https://git.moleculesai.app/molecule-ai/molecule-core/pull/235), [#236](https://git.moleculesai.app/molecule-ai/molecule-core/pull/236), [#238](https://git.moleculesai.app/molecule-ai/molecule-core/pull/238), [#239](https://git.moleculesai.app/molecule-ai/molecule-core/pull/239), [#245](https://git.moleculesai.app/molecule-ai/molecule-core/pull/245))
+- **Admin auth runbook added**: `admin-auth.md` covering test-token route lockdown and middleware variants. (`molecule-core` [#220](https://git.moleculesai.app/molecule-ai/molecule-core/pull/220))
+- **SOP Tier Check AND-composition**: required team approvals now compose with AND logic per tier. (`molecule-core` [#225](https://git.moleculesai.app/molecule-ai/molecule-core/pull/225))
+
+## 2026-05-09
+
+### ✨ New features
+
+- **Screen reader live announcements for workspace status changes**: canvas now announces workspace status transitions via ARIA live regions. (`molecule-core` [#172](https://git.moleculesai.app/molecule-ai/molecule-core/pull/172))
+- **Keyboard shortcuts help dialog + global `?` trigger**: press `?` anywhere on the canvas to open the keyboard shortcuts dialog. (`molecule-core` [#175](https://git.moleculesai.app/molecule-ai/molecule-core/pull/175))
+- **Keyboard-accessible node drag via Arrow keys**: nodes can now be dragged using Arrow keys (WCAG AA). (`molecule-core` [#182](https://git.moleculesai.app/molecule-ai/molecule-core/pull/182))
+- **Keyboard-accessible edge anchors via Enter/Space**: edge anchor handles are now activatable via Enter/Space. (`molecule-core` [#190](https://git.moleculesai.app/molecule-ai/molecule-core/pull/190))
+- **Keyboard-accessible node resize via Cmd/Ctrl+Arrow**: nodes can be resized using keyboard with Cmd/Ctrl+Arrow. (`molecule-core` [#192](https://git.moleculesai.app/molecule-ai/molecule-core/pull/192))
+
+### 🔧 Fixes
+
+- **SOP Tier Check: use `pull_request_target` instead of `pull_request`**: `pull_request` leaks `SOP_TIER_CHECK_TOKEN` to PR branches; fixed. (`molecule-core` [#146](https://git.moleculesai.app/molecule-ai/molecule-core/pull/146))
+- **Canvas boot-time matched-pair guard for ADMIN_TOKEN**: validates ADMIN_TOKEN env vars at boot to fail fast. (`molecule-core` [#53](https://git.moleculesai.app/molecule-ai/molecule-core/pull/53))
+- **Set git user.name/email from `$GITEA_USER` at boot**: workspace agents configure git identity from the Gitea username at startup. (`molecule-core` [#156](https://git.moleculesai.app/molecule-ai/molecule-core/pull/156))
+- **Show task text in Agent Comms for `delegate_task` calls**: delegation task text now visible in the Agent Comms tab. (`molecule-core` [#163](https://git.moleculesai.app/molecule-ai/molecule-core/pull/163))
+- **Cap `maxWorkers:1` to prevent jsdom pool worker startup timeouts**: jsdom worker pool capped at 1 to avoid cold-start timeouts on CI. (`molecule-core` [#149](https://git.moleculesai.app/molecule-ai/molecule-core/pull/149))
+- **Render delegation message body in Agent Comms tab**: delegation request body rendered as a message in the Agent Comms tab. (`molecule-core` [#167](https://git.moleculesai.app/molecule-ai/molecule-core/pull/167))
+- **Sanitize `err.Error()` leaks in CascadeDelete and OrgImport**: error messages no longer leak internal paths in audit logs. (`molecule-core` [#168](https://git.moleculesai.app/molecule-ai/molecule-core/pull/168))
+- **Install `plugins_registry/` at wheel top level for bare imports**: fixes import failures in bare Python environments. (`molecule-core` [#173](https://git.moleculesai.app/molecule-ai/molecule-core/pull/173))
+- **Render delegation responses as normal messages not error banners**: delegation results now appear as proper messages. (`molecule-core` [#171](https://git.moleculesai.app/molecule-ai/molecule-core/pull/171))
+- **Isolate token resolution from real `.auth_token` on disk**: tests no longer depend on real auth tokens on disk. (`molecule-core` [#178](https://git.moleculesai.app/molecule-ai/molecule-core/pull/178))
+- **Correct pending-uploads sweeper test isolation**: test isolation for the pending uploads sweeper corrected. (`molecule-core` [#185](https://git.moleculesai.app/molecule-ai/molecule-core/pull/185))
+- **Auto-restart workspace after file write/delete/replace**: workspaces now restart automatically after any file operation. (`molecule-core` [#188](https://git.moleculesai.app/molecule-ai/molecule-core/pull/188))
+- **Migrate `gh-identity` from GitHub to Gitea module path**: `gh-identity` plugin updated to use Gitea module path. (`molecule-core` [#189](https://git.moleculesai.app/molecule-ai/molecule-core/pull/189))
+- **Replace gh api calls with Gitea-compatible alternatives**: all GitHub CLI API calls replaced with Gitea REST equivalents. (`molecule-core` [#191](https://git.moleculesai.app/molecule-ai/molecule-core/pull/191))
+- **WCAG AA contrast fix + KeyboardShortcutsDialog improvements**: contrast ratios corrected; dialog UX improved. (`molecule-core` [#198](https://git.moleculesai.app/molecule-ai/molecule-core/pull/198))
+
+### 🧹 Internal
+
+- **SOP Tier Check deploy workflow soft-launch**: SOP Tier Check now runs as a proper deploy workflow. (`molecule-core` [#144](https://git.moleculesai.app/molecule-ai/molecule-core/pull/144))
+- **SOP Tier Check refactored with bash extraction**: core logic extracted to `.gitea/scripts/` with `SOP_DEBUG` gate. (`molecule-core` [#147](https://git.moleculesai.app/molecule-ai/molecule-core/pull/147))
+- **Audit force-merge SOP fan §SOP-6 to molecule-core**: force-merge audit workflow extended to molecule-core. (`molecule-core` [#150](https://git.moleculesai.app/molecule-ai/molecule-core/pull/150))
+- **Docker Compose includes infra services**: `docker compose up` now starts Temporal alongside the platform. (`molecule-core` [#162](https://git.moleculesai.app/molecule-ai/molecule-core/pull/162))
+- **Rename molecule-monorepo-net to molecule-core-net**: network name updated across Docker Compose files. (`molecule-core` [#166](https://git.moleculesai.app/molecule-ai/molecule-core/pull/166))
+- **Canvas audit status updated**: all HIGH and MEDIUM accessibility audit items confirmed closed. (`molecule-core` [#179](https://git.moleculesai.app/molecule-ai/molecule-core/pull/179), [#187](https://git.moleculesai.app/molecule-ai/molecule-core/pull/187), [#197](https://git.moleculesai.app/molecule-ai/molecule-core/pull/197))
+- **Token resolution isolation in tests**: test auth isolated from real `.auth_token` on disk. (`molecule-core` [#178](https://git.moleculesai.app/molecule-ai/molecule-core/pull/178))
+- **A2A proxy delivery-confirmed treated as delegation success**: proxy errors during confirmed delivery no longer marked as failures. (`molecule-core` [#170](https://git.moleculesai.app/molecule-ai/molecule-core/pull/170))
+- **Plugin test root skip**: `TestLocalResolver_BubblesUpCopyFailure` skipped when running as root. (`molecule-core` [#183](https://git.moleculesai.app/molecule-ai/molecule-core/pull/183))
+
+## 2026-05-08
+
+### ✨ New features
+
+- **!external cross-repo subtree resolver for org-import**: Phase 3a — org-import can now reference workspaces from external (cross-repo) subtrees. (`molecule-core` [#105](https://git.moleculesai.app/molecule-ai/molecule-core/pull/105))
+- **air-based hot-reload for workspace-server**: local development now uses air for hot-reload without container restarts. (`molecule-core` [#118](https://git.moleculesai.app/molecule-ai/molecule-core/pull/118))
+- **Per-role persona env injection from operator-host bootstrap dir**: org-import injects persona environment variables per role from a bootstrap directory. (`molecule-core` [#110](https://git.moleculesai.app/molecule-ai/molecule-core/pull/110))
+- **Atomic plugin install (stage → snapshot → swap → marker)**: plugin install is now atomic — stages content, snapshots, swaps, and marks on the docker path. (`molecule-core` [#120](https://git.moleculesai.app/molecule-ai/molecule-core/pull/120))
+- **Hot-reload classifier — skip restart on SKILL-content-only updates**: plugins that only change skill content no longer trigger workspace restart. (`molecule-core` [#121](https://git.moleculesai.app/molecule-ai/molecule-core/pull/121))
+- **workspace_plugins tracking table**: new DB table tracks installed plugin versions with subscription support. (`molecule-core` [#122](https://git.moleculesai.app/molecule-ai/molecule-core/pull/122))
+- **update_tier column for canary vs production fan-out**: workspaces now carry an `update_tier` field for phased rollout. (`molecule-core` [#124](https://git.moleculesai.app/molecule-ai/molecule-core/pull/124))
+- **Bind-mount `~/.molecule-ai/personas` into platform container**: persona files on the host are now bind-mounted into the platform container. (`molecule-core` [#127](https://git.moleculesai.app/molecule-ai/molecule-core/pull/127))
+- **Full docker-compose dev stack**: platform + canvas + all infra services now run via a single `docker compose up`. (`molecule-core` [#131](https://git.moleculesai.app/molecule-ai/molecule-core/pull/131))
+- **`spawning:false` field to skip workspace + descendants**: org-import can now skip entire subtrees with `spawning:false`. (`molecule-core` [#135](https://git.moleculesai.app/molecule-ai/molecule-core/pull/135))
+
+### 🔧 Fixes
+
+- **Plugin install/uninstall via EIC SSH on SaaS EC2 workspaces**: SaaS workspaces now use EC2 Instance Connect SSH instead of Docker for plugin ops. (`molecule-core` [#84](https://git.moleculesai.app/molecule-ai/molecule-core/pull/84))
+- **Parallel-safe postgres/redis containers in e2e-api CI**: E2E CI containers now use unique ports to avoid collisions. (`molecule-core` [#100](https://git.moleculesai.app/molecule-ai/molecule-core/pull/100))
+- **Handlers-postgres port collision under host-network runner**: sidestepped port conflicts on host-network runners. (`molecule-core` [#98](https://git.moleculesai.app/molecule-ai/molecule-core/pull/98))
+- **Vitest testTimeout bumped to 30s on CI**: cold-start timeout increased to handle v8-coverage overhead. (`molecule-core` [#97](https://git.moleculesai.app/molecule-ai/molecule-core/pull/97))
+- **Gitea artifact action compatibility**: `actions/upload-artifact` and `download-artifact` pinned to `@v3`. (`molecule-core` [#89](https://git.moleculesai.app/molecule-ai/molecule-core/pull/89))
+- **Three chronic Gitea-Actions workflow flakes closed**: auto-sync, promote, and retarget workflows stabilized. (`molecule-core` [#92](https://git.moleculesai.app/molecule-ai/molecule-core/pull/92))
+- **Canary alerting Gitea-incompatible API call dropped**: removed GitHub Actions API call from canary alerting. (`molecule-core` [#130](https://git.moleculesai.app/molecule-ai/molecule-core/pull/130))
+- **Preserve MODEL secret over MODEL_PROVIDER slug on restart**: model secret now survives restart without being overwritten by a provider slug. (`molecule-core` [#136](https://git.moleculesai.app/molecule-ai/molecule-core/pull/136))
+- **Org-import reconcile mode + audit event emission**: reconcile mode now emits proper audit events. (`molecule-core` [#137](https://git.moleculesai.app/molecule-ai/molecule-core/pull/137))
+- **Org-import started event emits after YAML parse**: started event now fires with a populated name field. (`molecule-core` [#142](https://git.moleculesai.app/molecule-ai/molecule-core/pull/142))
+- **Platform auth headers consolidated via shared helper**: auth header construction deduplicated. (`molecule-core` [#54](https://git.moleculesai.app/molecule-ai/molecule-core/pull/54))
+- **evalSymlinks template path resolution**: template paths with symlinks now resolve correctly. (`molecule-core` [#104](https://git.moleculesai.app/molecule-ai/molecule-core/pull/104))
+
+### 🧹 Internal
+
+- **Hermes-agent fork moved to Gitea**: all hermes references updated post-GitHub suspension. (`molecule-core` [#90](https://git.moleculesai.app/molecule-ai/molecule-core/pull/90))
+- **molecule-app trunk-based migration**: staging branch dropped; molecule-app now uses trunk-based development. (`molecule-app` [#3](https://git.moleculesai.app/molecule-ai/molecule-app/pull/3))
+- **CI switched to ubuntu-latest (public repo)**: Gitea Actions runners now use `ubuntu-latest`. (`docs` [#4](https://git.moleculesai.app/molecule-ai/docs/pull/4))
+- **Handler Delete() refactored to CascadeDelete helper**: workspace deletion decomposed for testability. (`molecule-core` [#139](https://git.moleculesai.app/molecule-ai/molecule-core/pull/139))
+
+## 2026-05-07
+
+### ✨ New features
+
+- **Canvas chat-server with server-side row-aware reverse**: canvas now consumes `/chat-history` with server-side chronological ordering (RFC #2945). (`molecule-core` [#4](https://git.moleculesai.app/molecule-ai/molecule-core/pull/4))
+- **CommunicationOverlay → ACTIVITY_LOGGED subscriber (Stage 1)**: communication overlay now subscribes to activity-logged events. (`molecule-core` [#69](https://git.moleculesai.app/molecule-ai/molecule-core/pull/69))
+- **A2ATopologyOverlay → ACTIVITY_LOGGED subscriber (Stage 2)**: topology overlay subscribes to A2A activity. (`molecule-core` [#71](https://git.moleculesai.app/molecule-ai/molecule-core/pull/71))
+- **ActivityTab → ACTIVITY_LOGGED subscriber (Stage 3, final)**: all three canvas overlays now consume ACTIVITY_LOGGED events. (`molecule-core` [#76](https://git.moleculesai.app/molecule-ai/molecule-core/pull/76))
+- **Local-dev provisioner builds from Gitea source**: provisioner in local dev mode clones from Gitea instead of GitHub. (`molecule-core` [#70](https://git.moleculesai.app/molecule-ai/molecule-core/pull/70))
+- **Demo Mock #1 — purchase modal + tier card buttons**: market UI now includes demo purchase flows. (`molecule-core` [#33](https://git.moleculesai.app/molecule-ai/molecule-core/pull/33), `landingpage` [#5](https://git.moleculesai.app/molecule-ai/landingpage/pull/5))
+- **Mock runtime + mock-bigorg 200-workspace org**: demo org with 200 mock workspaces for load testing. (`molecule-core` [#34](https://git.moleculesai.app/molecule-ai/molecule-core/pull/34))
+
+### 🔧 Fixes
+
+- **Gitea Actions compatibility across all workflows**: lowercase org slug, docker driver for buildx, inline ECR login, all resolved. (`molecule-core` [#17](https://git.moleculesai.app/molecule-ai/molecule-core/pull/17), [#28](https://git.moleculesai.app/molecule-ai/molecule-core/pull/28), [#31](https://git.moleculesai.app/molecule-ai/molecule-core/pull/31), [#32](https://git.moleculesai.app/molecule-ai/molecule-core/pull/32), [#38](https://git.moleculesai.app/molecule-ai/molecule-core/pull/38), [#41](https://git.moleculesai.app/molecule-ai/molecule-core/pull/41), [#43](https://git.moleculesai.app/molecule-ai/molecule-core/pull/43), [#45](https://git.moleculesai.app/molecule-ai/molecule-core/pull/45), [#46](https://git.moleculesai.app/molecule-ai/molecule-core/pull/46), [#50](https://git.moleculesai.app/molecule-ai/molecule-core/pull/50), [#51](https://git.moleculesai.app/molecule-ai/molecule-core/pull/51), [#66](https://git.moleculesai.app/molecule-ai/molecule-core/pull/66), [#78](https://git.moleculesai.app/molecule-ai/molecule-core/pull/78), [#80](https://git.moleculesai.app/molecule-ai/molecule-core/pull/80), [#83](https://git.moleculesai.app/molecule-ai/molecule-core/pull/83), `landingpage` [#1](https://git.moleculesai.app/molecule-ai/landingpage/pull/1), `landingpage` [#2](https://git.moleculesai.app/molecule-ai/landingpage/pull/2), `molecule-app` [#1](https://git.moleculesai.app/molecule-ai/molecule-app/pull/1))
+- **molecule-monorepo → molecule-core rename**: all workspace references updated. (`molecule-core` [#5](https://git.moleculesai.app/molecule-ai/molecule-core/pull/5), `landingpage` [#3](https://git.moleculesai.app/molecule-ai/landingpage/pull/3), `landingpage` [#4](https://git.moleculesai.app/molecule-ai/landingpage/pull/4), `molecule-app` [#2](https://git.moleculesai.app/molecule-ai/molecule-app/pull/2))
+- **Post-suspension: migrate github.com/Molecule-AI → git.moleculesai.app/molecule-ai**: all URL references updated across repos. (`molecule-core` [#40](https://git.moleculesai.app/molecule-ai/molecule-core/pull/40), [#42](https://git.moleculesai.app/molecule-ai/molecule-core/pull/42), `docs` [#1](https://git.moleculesai.app/molecule-ai/docs/pull/1), `docs` [#2](https://git.moleculesai.app/molecule-ai/docs/pull/2), `docs` [#3](https://git.moleculesai.app/molecule-ai/docs/pull/3))
+- **Tenant-aware rate-limit bucket keying**: rate limiting now keys by tenant to prevent one noisy tenant from affecting others. (`molecule-core` [#60](https://git.moleculesai.app/molecule-ai/molecule-core/pull/60))
+- **A2A proxy preflight container check**: proxy now checks container health before forwarding. (`molecule-core` [#37](https://git.moleculesai.app/molecule-ai/molecule-core/pull/37))
+- **Dev-mode default-bind to 127.0.0.1**: workspace-server binds to localhost in dev mode. (`molecule-core` [#8](https://git.moleculesai.app/molecule-ai/molecule-core/pull/8))
+- **SSOT-route container check + 422 on external runtimes**: single-source-of-truth route check returns 422 for unsupported runtimes. (`molecule-core` [#12](https://git.moleculesai.app/molecule-ai/molecule-core/pull/12))
+- **EIC tunnel pool + canvas Promise.all**: EC2 Instance Connect tunnel pool improves connection reuse; canvas uses `Promise.all` for parallel fetches. (`molecule-core` [#13](https://git.moleculesai.app/molecule-ai/molecule-core/pull/13))
+- **Pending uploads error metric wait**: test now waits for error metric before asserting. (`molecule-core` [#111](https://git.moleculesai.app/molecule-ai/molecule-core/pull/111))
+- **Test goroutine drain before t.Cleanup**: async goroutines drain before test cleanup to prevent flakiness. (`molecule-core` [#39](https://git.moleculesai.app/molecule-ai/molecule-core/pull/39))
+
+### 🧹 Internal
+
+- **README comprehensive refresh**: landing icon (light/dark SVG), 8 runtimes, Canvas v4, Memory v2, SaaS, channel plugin. (`molecule-core` [#5](https://git.moleculesai.app/molecule-ai/molecule-core/pull/5))
+- **GHCR → ECR swap + github-app-auth removal**: container registry migrated; GitHub App auth plugin removed. (`molecule-core` [#23](https://git.moleculesai.app/molecule-ai/molecule-core/pull/23))
+- **Branch protection check-name parity gate**: PR check names must match expected patterns. (`molecule-core` [#56](https://git.moleculesai.app/molecule-ai/molecule-core/pull/56))
+- **AUTO_SYNC_TOKEN rotation drift canary**: monitoring for token rotation drift in auto-sync workflow. (`molecule-core` [#77](https://git.moleculesai.app/molecule-ai/molecule-core/pull/77))
+- **Observability: edge-429 probe + rate-limit runbook**: edge rate-limit probe and runbook added. (`molecule-core` [#85](https://git.moleculesai.app/molecule-ai/molecule-core/pull/85))
+
+## 2026-05-06
+
+### ✨ New features
+
+- **Env-driven RegistryPrefix() for workspace template images**: provisioner now uses env-driven registry prefix for workspace template images. (`molecule-core` [#1](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1))
+
+
+---
 ## 2026-04-23
 
 ### ✨ New features
@@ -345,5 +494,4 @@ Fly Machines instead of Docker containers or EC2 instances. See the
 - Temporal workflow checkpoints — step endpoints, auto-resume behaviour. (docs PR #19)
 
 ---
-
 _Changelog entries are compiled by the [Documentation Specialist](https://github.com/Molecule-AI) from all merged pull requests for the day. Times are UTC._

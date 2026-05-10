@@ -7,6 +7,45 @@ All notable changes to the Molecule AI platform are documented here.
 Entries are published daily at 23:50 UTC.
 
 ---
+
+## 2026-05-10
+
+### ✨ New features
+
+- **MCP HTTP/SSE transport for Hermes**: `a2a_mcp_server.py` now speaks HTTP + SSE in addition to stdio, enabling the Hermes runtime to host MCP tools over a network endpoint rather than only via child-process stdio. (`molecule-ai-workspace-runtime` [#5](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-runtime/pull/5))
+- **molecule-sdk-python**: `RemoteAgentClient` now accepts `org_id` and `origin` kwargs in its constructor, enabling org-scoped registration and origin tracking from the first handshake. (`molecule-sdk-python` [#7](https://git.moleculesai.app/molecule-ai/molecule-sdk-python/pull/7))
+- **molecule-sdk-python**: `fetch_inbound()` now supports `peer_id` and `before_ts` filter params for targeted message retrieval — useful for polling a specific peer's pending tasks. (`molecule-sdk-python` [#6](https://git.moleculesai.app/molecule-ai/molecule-sdk-python/pull/6))
+- **molecule-sdk-python**: new `strip_a2a_boundary()` helper for safely stripping the `[A2A_RESULT_FROM_PEER]` trust-boundary marker from peer A2A responses (OFFSEC-003). Works correctly on both pre- and post-OFFSEC-003 responses. (`molecule-sdk-python` [#8](https://git.moleculesai.app/molecule-ai/molecule-sdk-python/pull/8))
+
+### 🔧 Fixes
+
+- **molecule-app**: WCAG 2.4.7 focus-visible rings added to all customer-facing buttons (`ThemeToggle`, `Track-issue Link`, and general CTA buttons) — keyboard and assistive-technology users now see a visible focus indicator on every interactive element. (`molecule-app` [#5](https://git.moleculesai.app/molecule-ai/molecule-app/pull/5), [#9](https://git.moleculesai.app/molecule-ai/molecule-app/pull/9), [#10](https://git.moleculesai.app/molecule-ai/molecule-app/pull/10))
+- **status.moleculesai.app aggregator**: the status page's probe result aggregator was rewritten to correctly compute composite uptime across all monitored endpoints — resolving false-down alerts caused by a data-structure bug in the previous implementation. (`molecule-ai-status` [#10](https://git.moleculesai.app/molecule-ai/molecule-ai-status/pull/10))
+- **molecule-sdk-python**: `InboundMessage` now surfaces `peer_name`, `peer_role`, and `agent_card_url` fields, enabling callers to attribute and inspect inbound A2A messages without a separate registry lookup. (`molecule-sdk-python` [#5](https://git.moleculesai.app/molecule-ai/molecule-sdk-python/pull/5))
+- **molecule-cli**: CI test workflow added — `molecule ci test` now runs a reproducible test suite against any workspace template. (`molecule-cli` [#3](https://git.moleculesai.app/molecule-ai/molecule-cli/pull/3))
+- **molecule-ai-workspace-runtime**: `a2a-sdk` dependency pinned to `>=1.0.0` to match the actual code — eliminates a version mismatch that caused `AttributeError` on newer SDK builds. (`molecule-ai-workspace-runtime` [#4](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-runtime/pull/4))
+
+### 📚 Docs
+
+- **molecule-sdk-python**: README API surface additions covering the Phase 30.8 RemoteAgentClient API, including `org_id`, `origin`, `fetch_inbound`, `InboundMessage`, and `strip_a2a_boundary()`. (`molecule-sdk-python` [#4](https://git.moleculesai.app/molecule-ai/molecule-sdk-python/pull/4))
+- **molecule-ai-status**: status page documentation updated to reflect the new Gitea-native uptime probe replacing the Upptime dependency. (`molecule-ai-status` [#4](https://git.moleculesai.app/molecule-ai/molecule-ai-status/pull/4))
+- **molecule-sdk-python**: `pytest-asyncio` documented as an optional test dependency in `CLAUDE.md`. (`molecule-sdk-python` [#3](https://git.moleculesai.app/molecule-ai/molecule-sdk-python/pull/3))
+- **Remote Workspaces guide**: full `RemoteAgentClient` API reference added to `content/docs/guides/remote-workspaces.md`, covering constructor params, `fetch_inbound()`, `InboundMessage` fields, and the OFFSEC-003 `strip_a2a_boundary()` security section. (`docs` [#13](https://git.moleculesai.app/molecule-ai/docs/pull/13))
+- **status.moleculesai.app**: status page aggregator fix documented in the changelog. (`docs` [#14](https://git.moleculesai.app/molecule-ai/docs/pull/14))
+
+### 🧹 Internal
+
+- **CI migration wave**: 22 repos migrated CI workflows from `.github/workflows/` to `.gitea/workflows/` following the GitHub org suspension (post-suspension sweep). Affected repos: `molecule-cli`, `molecule-sdk-python`, `molecule-mcp-server`, and all 21 plugin repos.
+- **Plugin hygiene**: 20 plugin repos received `.gitignore` Python-ignores (`__pycache__/`, `*.pyc`) and `__pycache__` directory removal across the plugin ecosystem (`molecule-ai-plugin-*`).
+- **Plugin smoke-test suites**: 13 plugin repos (`molecule-ai-plugin-*`) now ship with documented smoke-test suites and coverage rationale READMEs (`tests/README.md`), adding test counts ranging from 21 to 26 tests per plugin.
+- **Hook path fixes**: `molecule-ai-plugin-molecule-freeze-scope` and `molecule-ai-plugin-molecule-audit-trail` received `get_repo_root()` layout detection fixes and corresponding test suites.
+- **molecule-ai-org-template-molecule-dev**: org-level `initial_prompt` updated from GitHub to Gitea URLs. (`molecule-ai-org-template-molecule-dev` [#8](https://git.moleculesai.app/molecule-ai/molecule-ai-org-template-molecule-dev/pull/8))
+- **molecule-ai-workspace-template-claude-code**: adapter alias-map now correctly maps `yaml_provider` for runtime-wheel defaults. (`molecule-ai-workspace-template-claude-code` [#12](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-template-claude-code/pull/12))
+- **molecule-ai-plugin-molecule-careful-bash**: token exfiltration pattern block (OFFSEC-002) now documented in `known-issues.md`. (`molecule-ai-plugin-molecule-careful-bash` [#3](https://git.moleculesai.app/molecule-ai/molecule-ai-plugin-molecule-careful-bash/pull/3))
+- **molecule-ci**: 7 reusable workflows ported to `.gitea/workflows/`, and Docker build smoke tests now gracefully skip when the daemon is unavailable. (`molecule-ci` [#6](https://git.moleculesai.app/molecule-ai/molecule-ci/pull/6), [#7](https://git.moleculesai.app/molecule-ai/molecule-ci/pull/7))
+
+---
+
 ## 2026-04-23
 
 ### ✨ New features

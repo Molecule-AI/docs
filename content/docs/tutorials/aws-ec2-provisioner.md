@@ -8,8 +8,8 @@ description: "How the molecule-controlplane EC2 provisioner turns POST /cp/orgs 
 As of April 2026, Molecule AI's SaaS control plane provisions both **tenants**
 (per-org platform VMs) and **workspaces** (per-agent inference VMs) on
 AWS EC2 instances. The provisioner lives at
-[`molecule-controlplane/internal/provisioner/ec2.go`](https://github.com/Molecule-AI/molecule-controlplane/blob/main/internal/provisioner/ec2.go)
-and is auto-wired by [`cmd/server/main.go`](https://github.com/Molecule-AI/molecule-controlplane/blob/main/cmd/server/main.go)
+[`molecule-controlplane/internal/provisioner/ec2.go`](https://git.moleculesai.app/molecule-ai/molecule-controlplane/blob/main/internal/provisioner/ec2.go)
+and is auto-wired by [`cmd/server/main.go`](https://git.moleculesai.app/molecule-ai/molecule-controlplane/blob/main/cmd/server/main.go)
 whenever AWS credentials are present in the control-plane environment. The
 platform manages workspace lifecycle, auth, and routing; AWS manages the
 underlying EC2, security groups, and network plumbing.
@@ -103,7 +103,7 @@ provisioner.
 | `GHCR_PULL_TOKEN` | GHCR pull token written into the tenant bootstrap bundle (private images only) |
 
 For the always-current set, grep
-[`cmd/server/main.go` lines 86–158](https://github.com/Molecule-AI/molecule-controlplane/blob/main/cmd/server/main.go#L86-L158)
+[`cmd/server/main.go` lines 86–158](https://git.moleculesai.app/molecule-ai/molecule-controlplane/blob/main/cmd/server/main.go#L86-L158)
 for `os.Getenv` calls inside the `provisioner.NewEC2` block.
 
 ## What happens on `POST /cp/orgs` (tenant provision)
@@ -225,7 +225,7 @@ retry replays the cascade) instead of becoming a silent leak (#263).
 
 The control plane has migrated infrastructure twice in April 2026 — both
 documented in the
-[molecule-controlplane README "Migration history"](https://github.com/Molecule-AI/molecule-controlplane#migration-history):
+[molecule-controlplane README "Migration history"](https://git.moleculesai.app/molecule-ai/molecule-controlplane#migration-history):
 
 - **Apr 2026 — CP host:** Fly (`molecule-cp.fly.dev`) → Railway
   (`api.moleculesai.app`).
@@ -275,9 +275,9 @@ wired in `cmd/server/main.go`.
 
 ## References
 
-- [`molecule-controlplane/internal/provisioner/ec2.go`](https://github.com/Molecule-AI/molecule-controlplane/blob/main/internal/provisioner/ec2.go) — provisioner source
-- [`molecule-controlplane/cmd/server/main.go`](https://github.com/Molecule-AI/molecule-controlplane/blob/main/cmd/server/main.go) — env-var wiring
-- [`molecule-controlplane` README "Migration history"](https://github.com/Molecule-AI/molecule-controlplane#migration-history) — canonical record
+- [`molecule-controlplane/internal/provisioner/ec2.go`](https://git.moleculesai.app/molecule-ai/molecule-controlplane/blob/main/internal/provisioner/ec2.go) — provisioner source
+- [`molecule-controlplane/cmd/server/main.go`](https://git.moleculesai.app/molecule-ai/molecule-controlplane/blob/main/cmd/server/main.go) — env-var wiring
+- [`molecule-controlplane` README "Migration history"](https://git.moleculesai.app/molecule-ai/molecule-controlplane#migration-history) — canonical record
 - [AWS EC2 Instance Connect endpoints](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-connect-endpoint.html)
 - [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html)
 - [SaaS file writes via EC2 Instance Connect](./saas-file-writes-eic.md) — EIC is also the Files API write channel

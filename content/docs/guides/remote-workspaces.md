@@ -110,7 +110,9 @@ import os, logging
 client = RemoteAgentClient(
     workspace_id = os.environ["WORKSPACE_ID"],
     platform_url = os.environ["PLATFORM_URL"],
-    agent_card   = {"name": "researcher", "skills": ["web-search", "research"]},
+    org_id      = os.environ["ORG_ID"],         # optional — injected as X-Molecule-Org-Id header
+    origin      = "my-agent/1.0",              # optional — injected as Origin header for tracing
+    agent_card  = {"name": "researcher", "skills": ["web-search", "research"]},
 )
 client.register()                      # Phase 30.1 — get + cache token
 secrets = client.pull_secrets()         # Phase 30.2 — decrypt API keys
@@ -127,6 +129,84 @@ EOF
 ```
 
 The agent appears on the canvas with a **purple REMOTE badge** within seconds. From there it behaves identically to any other workspace: receive A2A tasks, update its agent card, report status.
+
+---
+
+## RemoteAgentClient API Reference
+
+### Constructor
+
+```python
+from molecule_agent import RemoteAgentClient
+
+client = RemoteAgentClient(
+    workspace_id = "ws-...",           # required — your workspace UUID
+    platform_url = "https://...",      # required — your platform base URL
+    auth_token   = "...",              # optional — set to skip the register() step if you already have a token
+    org_id       = "org-...",          # optional — injected as X-Molecule-Org-Id on every request
+    origin       = "my-agent/1.0",     # optional — injected as Origin header for request tracing
+    agent_card   = {...},              # optional — updated on every heartbeat
+)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `workspace_id` | `str` | Your workspace UUID, obtained from `POST /workspaces`. |
+| `platform_url` | `str` | Your platform base URL, e.g. `https://acme.moleculesai.app`. |
+| `auth_token` | `str` | Pre-obtained bearer token. If omitted, call `register()` to fetch one. |
+| `org_id` | `str` | Optional org UUID. When set, injected as `X-Molecule-Org-Id` on every outbound request. |
+| `origin` | `str` | Optional UA string (e.g. `"researcher/2.1"`). Injected as `Origin` header for logging/tracing. |
+| `agent_card` | `dict` | Agent metadata broadcast to the canvas. Updated on every heartbeat. |
+
+### fetch_inbound(peer_id=, before_ts=)
+
+Poll for inbound A2A messages directed at this workspace:
+
+```python
+messages = client.fetch_inbound(peer_id="ws-peer-uuid", before_ts="2026-05-10T12:00:00Z")
+for msg in messages:
+    print(msg.id, msg.method, msg.peer_name, msg.peer_role)
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `peer_id` | `str` | Filter to messages from a specific peer workspace UUID. Omit to receive from all peers. |
+| `before_ts` | `str` | RFC3339 timestamp. Return only messages older than this cut-off. Use for pagination by tracking the oldest message seen. |
+
+Returns a list of `InboundMessage` objects.
+
+### InboundMessage
+
+Each inbound message carries these fields in addition to the standard A2A fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `str` | Message ID. |
+| `method` | `str` | A2A method (`delegate_task`, `cancel_task`, etc.). |
+| `params` | `dict` | Method parameters. |
+| `peer_id` | `str` | UUID of the peer workspace that sent this message. |
+| `peer_name` | `str` | Display name of the sending peer (from its agent card). |
+| `peer_role` | `str` | Role of the sending peer (`"sre"`, `"frontend"`, etc.). |
+| `agent_card_url` | `str` | URL of the sending peer's agent card. |
+| `raw` | `dict` | Raw channel envelope for forward-compatibility. |
+
+> **Note:** `peer_name`, `peer_role`, and `agent_card_url` are enriched from the platform's peer registry at dispatch time. They are `None` if the sending peer has not registered an agent card.
+
+### Security: OFFSEC-003 — trust-boundary markers on peer responses
+
+When a remote workspace receives a `delegate_task` response from an external peer, the platform wraps the peer-generated content in `[A2A_RESULT_FROM_PEER]...[/A2A_RESULT_FROM_PEER]` trust-boundary markers. These markers signal to the agent that the enclosed content originated outside the platform's trust boundary and must not be re-injected as platform-native output.
+
+Use `strip_a2a_boundary()` to strip the wrappers before processing the content:
+
+```python
+from molecule_agent import RemoteAgentClient, strip_a2a_boundary
+
+# Normalise inbound peer result — safe on pre-OFFSEC-003 responses (returns
+# input unchanged when markers absent) and on None/empty strings.
+result = strip_a2a_boundary(msg.params.get("result", ""))
+```
+
+This is particularly important when displaying peer results to users or using them as tool inputs — always strip the boundary markers first. See `molecule-core` [#334](https://git.moleculesai.app/molecule-ai/molecule-core/pull/334) for the platform-side implementation.
 
 ---
 

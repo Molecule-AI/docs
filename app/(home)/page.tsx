@@ -13,13 +13,13 @@ export default function HomePage() {
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Link
           href="/docs"
-          className="rounded-md bg-fd-primary px-5 py-2.5 text-sm font-medium text-fd-primary-foreground transition-colors hover:opacity-90"
+          className="rounded-md bg-fd-primary px-5 py-2.5 text-sm font-medium text-fd-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fd-ring"
         >
           Read the docs
         </Link>
         <Link
           href="https://git.moleculesai.app/molecule-ai/molecule-core"
-          className="rounded-md border border-fd-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-fd-muted"
+          className="rounded-md border border-fd-border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-fd-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fd-ring"
         >
           View on Gitea
         </Link>

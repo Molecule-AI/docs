@@ -15,6 +15,19 @@ export const metadata = {
   description:
     'Build and run multi-agent organisations on the Molecule AI platform. Templates, plugins, channels, and the runtime that ties them together.',
   metadataBase: new URL('https://doc.moleculesai.app'),
+  openGraph: {
+    type: 'website',
+    siteName: 'Molecule AI Documentation',
+    title: 'Molecule AI Documentation',
+    description:
+      'Build and run multi-agent organisations on the Molecule AI platform. Templates, plugins, channels, and the runtime that ties them together.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Molecule AI Documentation',
+    description:
+      'Build and run multi-agent organisations on the Molecule AI platform.',
+  },
 };
 
 export default function Layout({ children }: { children: ReactNode }) {

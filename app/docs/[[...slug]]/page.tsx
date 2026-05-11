@@ -41,8 +41,20 @@ export async function generateMetadata(props: {
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
+  const url = `https://doc.moleculesai.app/docs/${(params.slug ?? []).join("/")}`;
+
   return {
     title: page.data.title,
     description: page.data.description,
+    openGraph: {
+      title: `${page.data.title} | Molecule AI Docs`,
+      description: page.data.description,
+      url,
+      siteName: "Molecule AI Documentation",
+      type: "article" as const,
+    },
+    alternates: {
+      canonical: url,
+    },
   };
 }

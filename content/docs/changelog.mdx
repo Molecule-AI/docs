@@ -10,13 +10,25 @@ Entries are published daily at 23:50 UTC.
 
 ## 2026-05-11
 
+### ✨ New features
+
+- **Delegation results auto-surfaced to agents**: when a `delegate_task` call completes, the results are now automatically injected into the agent's next turn — no explicit `check_task_status` call required. This closes the gap where parallel `delegate_task` calls returned after the SDK turn ended and the agent had no way to discover the results. (`molecule-core` [#358](https://git.moleculesai.app/molecule-ai/molecule-core/pull/358))
+- **`claude_code` runtime support for 4 plugins**: the `audit`, `compliance`, `hitl`, and `security-scan` plugins now include a `claude_code` adapter, resolving the registry gap warning when using Claude Code as the agent runtime with these plugins. (`molecule-ai-plugin-molecule-audit` [#6](https://git.moleculesai.app/molecule-ai/molecule-ai-plugin-molecule-audit/pull/6), `molecule-ai-plugin-molecule-compliance` [#6](https://git.moleculesai.app/molecule-ai/molecule-ai-plugin-molecule-compliance/pull/6), `molecule-ai-plugin-molecule-hitl` [#6](https://git.moleculesai.app/molecule-ai/molecule-ai-plugin-molecule-hitl/pull/6), `molecule-ai-plugin-molecule-security-scan` [#6](https://git.moleculesai.app/molecule-ai/molecule-ai-plugin-molecule-security-scan/pull/6))
+- **MCP HTTP/SSE transport improvements**: `a2a_mcp_server.py` now correctly identifies itself as `"molecule"` (was `"a2a-delegation"`), emits SSE heartbeats with `data: null` (was invalid `data: {}`), and only sends a heartbeat when the connection is idle — eliminating spurious heartbeat noise on every response. (`molecule-ai-workspace-runtime` [#12](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-runtime/pull/12))
+
 ### 🔧 Fixes
 
 - **A2A proxy response header timeout increased**: the platform's A2A proxy `ResponseHeaderTimeout` has been raised from 60 s to 180 s, eliminating premature 504 timeouts on long-running A2A dispatch operations (e.g. agent synthesis, cold-start OAuth flows). The timeout is now also configurable per-deployment via the `A2A_PROXY_RESPONSE_HEADER_TIMEOUT` environment variable. (`molecule-core` [#331](https://git.moleculesai.app/molecule-ai/molecule-core/pull/331))
+- **A2A push-mode queue response now correctly sets `delivery_mode`**: the A2A response parser now explicitly sets `delivery_mode="push"` on `Queued` variants returned from push-mode workspace queue envelopes. Previously it silently defaulted, causing callers that branch on `v.delivery_mode` to mis-route poll-mode responses as push-mode (and vice versa). (`molecule-core` [#356](https://git.moleculesai.app/molecule-ai/molecule-core/pull/356))
+- **PLATFORM_URL defaults aligned across runtime modules**: all workspace runtime modules (`a2a_cli.py`, `a2a_client.py`, `a2a_mcp_server.py`, and 10 others) now consistently default `PLATFORM_URL` to `http://host.docker.internal:8080`, eliminating an inconsistency where some modules pointed to `http://platform:8080`. (`molecule-ai-workspace-runtime` [#12](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-runtime/pull/12))
+- **MCP server setup command corrected**: the `get_remote_agent_setup_command` tool now emits the correct pip install command (`pip install molecule-ai-sdk` and path `molecule-sdk-python/`) instead of the incorrect `pip install molecule-sdk` / `sdk/python/`. Users following the tool's output will now get a working setup. (`molecule-mcp-server` [#4](https://git.moleculesai.app/molecule-ai/molecule-mcp-server/pull/4))
 
 ### 🧹 Internal
 
 - **CI fixes** (`molecule-core`): `publish-runtime.yml` split into two workflows (tags-only publisher + autobump) and a Gitea `workflow_dispatch.inputs` parser bug (causing the workflow to be silently ignored) has been fixed. (`molecule-core` [#349](https://git.moleculesai.app/molecule-ai/molecule-core/pull/349), [#352](https://git.moleculesai.app/molecule-ai/molecule-core/pull/352), [#353](https://git.moleculesai.app/molecule-ai/molecule-core/pull/353))
+- **CI infrastructure improvements** (`molecule-ci`): a graceful runner restart script with unit tests has been added, improving operational reliability of CI runners. (`molecule-ci` [#8](https://git.moleculesai.app/molecule-ai/molecule-ci/pull/8))
+- **Delegation results sanitization** (`molecule-ai-workspace-runtime`): `read_delegation_results()` now sanitizes content from peer delegation responses before injecting them into the agent context, ensuring trust-boundary markers are stripped before results are surfaced. (`molecule-ai-workspace-runtime` [#13](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-runtime/pull/13))
+- **CI migration wave (second pass)**: a second wave of CI workflow renames from `.github/workflows/` to `.gitea/workflows/` completed across `molecule-controlplane`, `molecule-ai-workspace-runtime`, `molecule-sdk-python`, `molecule-mcp-server`, and 12 plugin repos. (`molecule-ai-*` [#various](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-runtime/pull/8))
 
 ---
 

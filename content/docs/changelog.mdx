@@ -8,6 +8,18 @@ Entries are published daily at 23:50 UTC.
 
 ---
 
+## 2026-05-11
+
+### 🔧 Fixes
+
+- **A2A proxy response header timeout increased**: the platform's A2A proxy `ResponseHeaderTimeout` has been raised from 60 s to 180 s, eliminating premature 504 timeouts on long-running A2A dispatch operations (e.g. agent synthesis, cold-start OAuth flows). The timeout is now also configurable per-deployment via the `A2A_PROXY_RESPONSE_HEADER_TIMEOUT` environment variable. (`molecule-core` [#331](https://git.moleculesai.app/molecule-ai/molecule-core/pull/331))
+
+### 🧹 Internal
+
+- **CI fixes** (`molecule-core`): `publish-runtime.yml` split into two workflows (tags-only publisher + autobump) and a Gitea `workflow_dispatch.inputs` parser bug (causing the workflow to be silently ignored) has been fixed. (`molecule-core` [#349](https://git.moleculesai.app/molecule-ai/molecule-core/pull/349), [#352](https://git.moleculesai.app/molecule-ai/molecule-core/pull/352), [#353](https://git.moleculesai.app/molecule-ai/molecule-core/pull/353))
+
+---
+
 ## 2026-05-10
 
 ### ✨ New features

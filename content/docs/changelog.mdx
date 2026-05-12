@@ -10,6 +10,10 @@ Entries are published daily at 23:50 UTC.
 
 ## 2026-05-12
 
+### 🔒 Security
+
+- **OFFSEC-001: MCP endpoint information disclosure fixed**: the JSON-RPC `-32601` error handler in `mcp.go` was reflecting user-controlled `req.Method` back into the error message. An agent or canvas client sending a crafted `method` field would see that value reflected in the error response. The handler now returns a constant `"method not found"` string, closing the information-disclosure vector. (`molecule-core` [#692](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/692))
+
 ### 🐛 Bug fixes
 
 - **Canvas focus-visible regression fixed in FilesTab and BudgetSection**: a regression introduced in recent canvas updates caused focus-visible rings to stop rendering on `FilesTab` and `BudgetSection` components. Restored to full WCAG 2.4.7 compliance — keyboard and assistive-technology users see a visible focus indicator on all interactive elements in these panels. (`molecule-core` [#614](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/614))
@@ -17,7 +21,7 @@ Entries are published daily at 23:50 UTC.
 ### 🧹 Internal
 
 - **CI quality hardening** (`molecule-core`): `status-reaper` revised to sweep the last 10 main commits (up from 1) to catch stranded statuses from concurrent workflows; fixed a broken concurrency block that caused duplicate alerts on Gitea 1.22.6. (`molecule-core` [#633](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/633), [#618](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/618))
-- **CI infrastructure fixes** (`molecule-core`): runner label pinned for docker-capable runners in publish workflows; `ubuntu-latest` runner restored after a revert; `sop-tier-check` now gracefully handles empty/invalid tokens in staging; `per-package` diagnostic step added to the publish pipeline. (`molecule-core` [#636](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/636), [#609](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/609), [#606](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/606))
+- **CI infrastructure fixes** (`molecule-core`): runner label pinned for docker-capable runners in publish workflows; `ubuntu-latest` runner restored after a revert; `sop-tier-check` now gracefully handles empty/invalid tokens in staging; `per-package` diagnostic step added to the publish pipeline; `workflow_run` triggers replaced with `push+paths` across affected workflows for Gitea 1.22.6 compatibility. (`molecule-core` [#636](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/636), [#609](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/609), [#606](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/606), [#694](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/694))
 - **Test coverage additions** (`molecule-core`): 180+ new test cases across canvas, UI, tabs, platform/bundle, and workspace modules — covering FilesTab, BudgetSection, NotAvailablePanel, FilesToolbar, KeyValueField, RevealToggle, ValidationHint, getSkills, extractSkills, exporter.go, buildBundleConfigFiles, and a2a_response.py queue envelope. (`molecule-core` [#614](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/614), [#611](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/611), [#629](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/629), [#600](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/600), [#616](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/616), [#592](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/592), [#626](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/626), [#587](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/587), [#621](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/621))
 
 ---

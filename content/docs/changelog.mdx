@@ -315,7 +315,7 @@ See the [migration blog post](/blog/cloudflare-tunnel-migration).
 #### 🔧 Fixes
 
 - **A2A queue nil-safe drain** (`molecule-core` [#1893](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/1893), [#1896](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/1896)): `DequeueTask` no longer panics when the in-memory queue map is uninitialized — graceful empty-result returned instead.
-- **Workspaces stuck in `provisioning` after失败** (`molecule-core` [#1794](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/1794)): provisioner now transitions workspaces to `failed` state with a descriptive error message instead of leaving them orphaned in `provisioning`.
+- **Workspaces stuck in `provisioning` after failure** (`molecule-core` [#1794](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/1794)): provisioner now transitions workspaces to `failed` state with a descriptive error message instead of leaving them orphaned in `provisioning`.
 - **Dedup settings hooks double-fire** (`molecule-core` [#1797](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/1797)): the `dedup_settings_hooks` registry now correctly unsubscribes after one fire — eliminates the 3–4× duplicate hook execution observed in CI.
 - **Semantic memory search returning stale results** (`molecule-core` [#1778](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/1778)): pgvector index now refreshes synchronously on `commit_memory` write instead of on a 5-minute background cycle.
 - **pgvector migration race in E2E CI** (`molecule-core` [#1777](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/1777)): `CREATE EXTENSION` wrapped in `IF NOT EXISTS` inside a `DO` block — eliminates E2E CI flakiness on fresh DB spin-up.

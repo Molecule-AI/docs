@@ -8,6 +8,27 @@ Entries are published daily at 23:50 UTC.
 
 ---
 
+## 2026-05-13
+
+### ✨ New features
+
+- **Graceful shutdown support for remote agents**: `run_heartbeat_loop()` and `run_agent_loop()` in `molecule-sdk-python` now accept a `stop_event: threading.Event` parameter. Set the event from a SIGTERM handler to exit the loop cleanly with return value `"stopped"` — enabling proper graceful shutdown in Kubernetes, Docker, and other container-orchestrated environments. (`molecule-sdk-python` [#8](https://git.moleculesai.app/molecule-ai/molecule-sdk-python/pulls/8))
+
+### 🔧 Fixes
+
+- **PLATFORM_URL defaults aligned across all runtime modules**: all workspace runtime modules (`a2a_cli.py`, `a2a_client.py`, `a2a_mcp_server.py`, and 10 others) now consistently default `PLATFORM_URL` to `http://host.docker.internal:8080`. Previously some modules defaulted to `http://platform:8080`, causing connection failures in containerized deployments where the Docker host is not named `platform`. (`molecule-ai-workspace-runtime` [#12](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-runtime/pulls/12))
+
+### 🔒 Security
+
+- **CWE-22: Path traversal regression in org template import fixed**: a regression removed the path-traversal guard from `createWorkspaceTree` in `org_import.go`, which could allow a malicious org YAML with `filesDir: "../../../etc"` to read arbitrary server files. The fix replaces the unprotected `parseEnvFile` calls with `loadWorkspaceEnv` which applies `resolveInsideRoot` validation before accessing any path. (`molecule-core` [#810](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/810))
+
+### 🧹 Internal
+
+- **Canvas CI hardening**: publish workflow updated to pipefail-safe shell probes; Gitea cache export no longer masks errors; canvas image published to ECR. (`molecule-core` [#773](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/773), [#776](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/776), [#777](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/777))
+- **Go lint CI hardening**: `golangci-lint run` no longer masked with `|| true`, so lint failures now fail the build loudly. (`molecule-core` [#781](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/781))
+
+---
+
 ## 2026-05-12
 
 ### 🔒 Security

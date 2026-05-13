@@ -929,7 +929,7 @@ Postgres + Redis + Langfuse only (for local development without containerized wo
 |----------|---------|---------|
 | `WORKSPACE_ID` | `workspace-default` | Unique workspace identifier |
 | `WORKSPACE_CONFIG_PATH` | `/configs` | Config directory mount |
-| `PLATFORM_URL` | `http://platform:8080` | Platform connection |
+| `PLATFORM_URL` | `http://host.docker.internal:8080` | Platform connection |
 | `PARENT_ID` | Empty | Parent workspace ID (set if nested) |
 | `AWARENESS_URL` | Optional | Awareness service |
 | `AWARENESS_NAMESPACE` | Optional | Scoped namespace for awareness memory |

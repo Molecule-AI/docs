@@ -42,7 +42,7 @@ Common runtime environment variables:
 ```bash
 WORKSPACE_ID=ws-123
 WORKSPACE_CONFIG_PATH=/configs
-PLATFORM_URL=http://platform:8080
+PLATFORM_URL=http://host.docker.internal:8080
 PARENT_ID=
 AWARENESS_URL=http://awareness:37800
 AWARENESS_NAMESPACE=workspace:ws-123

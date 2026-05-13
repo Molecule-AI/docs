@@ -119,12 +119,20 @@ secrets = client.pull_secrets()         # Phase 30.2 — decrypt API keys
 print("Secrets:", list(secrets.keys()))
 
 # Keep alive + respond to platform commands
+import threading, signal, sys
+
+stop_event = threading.Event()
+signal.signal(signal.SIGTERM, lambda *_: stop_event.set())
+
 client.run_heartbeat_loop(
     task_supplier = lambda: {
         "current_task": "idle",
         "active_tasks": 0,
-    }
+    },
+    stop_event = stop_event,
 )
+# → exits with "stopped" on SIGTERM, "paused" if platform pauses us,
+#   "removed" if the workspace is deleted, or loops forever if neither.
 EOF
 ```
 
@@ -191,6 +199,68 @@ Each inbound message carries these fields in addition to the standard A2A fields
 | `raw` | `dict` | Raw channel envelope for forward-compatibility. |
 
 > **Note:** `peer_name`, `peer_role`, and `agent_card_url` are enriched from the platform's peer registry at dispatch time. They are `None` if the sending peer has not registered an agent card.
+
+### run_heartbeat_loop(stop_event=, max_iterations=, task_supplier=)
+
+Drives heartbeat + state-poll on a timer. Returns the terminal status when the loop exits.
+
+```python
+import threading, signal
+
+stop_event = threading.Event()
+signal.signal(signal.SIGTERM, lambda *_: stop_event.set())
+
+status = client.run_heartbeat_loop(
+    max_iterations = None,           # None = run until paused/deleted; int = stop after N ticks
+    task_supplier  = lambda: {       # optional — report current task to the canvas
+        "current_task": "idle",
+        "active_tasks": 0,
+    },
+    stop_event = stop_event,         # set() to exit cleanly with return value "stopped"
+)
+# status is one of: "stopped" | "paused" | "removed" | "max_iterations"
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `stop_event` | `threading.Event \| None` | When set, the loop exits cleanly with `"stopped"`. Use in a SIGTERM handler for graceful Kubernetes/Docker shutdown. Ignored when `None`. |
+| `max_iterations` | `int \| None` | Stop after N loop iterations. `None` (default) = run until the workspace is paused or deleted. |
+| `task_supplier` | `callable \| None` | Zero-arg callable returning `{"current_task": str, "active_tasks": int}`. Reports activity to the canvas on each tick. |
+
+Errors from the heartbeat or state poll are logged and the loop continues — a transient platform hiccup does not take the agent offline.
+
+### run_agent_loop(handler, delivery=, stop_event=, max_iterations=, task_supplier=)
+
+Combined heartbeat + state-poll + inbound-delivery loop. The recommended entry point for external agent authors: registers, heartbeats, state-polls, and dispatches inbound A2A messages in one synchronous call.
+
+```python
+from molecule_agent import RemoteAgentClient, PollDelivery
+import threading, signal
+
+stop_event = threading.Event()
+signal.signal(signal.SIGTERM, lambda *_: stop_event.set())
+
+async def handle(msg):
+    print(f"Got message: {msg.method}")
+    return "Acknowledged"
+
+status = client.run_agent_loop(
+    handler      = handle,
+    delivery     = None,             # defaults to PollDelivery — correct for agents without a public URL
+    stop_event   = stop_event,       # set() to exit cleanly
+    max_iterations = None,
+    task_supplier  = lambda: {"current_task": "idle", "active_tasks": 0},
+)
+# status is one of: "stopped" | "paused" | "removed" | "max_iterations"
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `handler` | `Callable[[InboundMessage], str \| None]` | Called once per inbound A2A message. Return a non-empty string to auto-reply; `None` to skip the reply. |
+| `delivery` | `InboundDelivery \| None` | Delivery mechanism. Defaults to `PollDelivery` (polling, no inbound URL needed). Pass `PushDelivery` wrapped around an `A2AServer` for push-mode agents. |
+| `stop_event` | `threading.Event \| None` | When set, the loop exits cleanly with `"stopped"`. Ignored when `None`. |
+| `max_iterations` | `int \| None` | Stop after N loop iterations. `None` = run until paused/deleted. |
+| `task_supplier` | `callable \| None` | Zero-arg callable returning `{"current_task": str, "active_tasks": int}`. |
 
 ### Security: OFFSEC-003 — trust-boundary markers on peer responses
 

@@ -1,0 +1,176 @@
+---
+title: "Dev-channels flag — tagged-form requirement"
+description: "Why Claude Code 2.1.x+ requires `--dangerously-load-development-channels server:molecule` (not the bare flag) to enable inline channel push from the molecule-mcp wheel."
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+The `molecule-mcp` wheel emits a JSON-RPC `notifications/claude/channel`
+notification on every inbound A2A message so Claude Code can render it
+as an inline `<channel>` synthetic user turn — zero polling, zero
+per-turn stall. During the channels research preview, Claude Code only
+processes that notification when the host is launched with the
+`--dangerously-load-development-channels` flag *and the flag carries a
+matching tagged allowlist entry*.
+
+This page covers the form that flag must take, what breaks when it's
+wrong, and when an operator has to think about it.
+
+<Callout type="warn">
+The bare flag (no value) is rejected by the post-2.1 CLI parser, and
+the failure mode propagates upstream as a `Control request timeout:
+initialize` from any SDK that spawns the CLI — every A2A turn wedges
+100% of the time. See [Failure mode](#failure-mode) below.
+</Callout>
+
+## The flag
+
+```
+--dangerously-load-development-channels <entries...>
+```
+
+Available in Claude Code **2.1.x and later**. It opts the CLI into
+processing experimental `notifications/<channel>` JSON-RPC methods
+emitted by registered MCP servers and plugin channels. Without it, the
+CLI silently drops those notifications during the allowlist check, even
+though the wheel ships the wire shape correctly.
+
+## Required form: tagged allowlist entries
+
+Each entry must carry one of two prefixes:
+
+| Form | Use for |
+|---|---|
+| `server:<MCP-server-name>` | Manually configured MCP servers — the name matches what you registered with `claude mcp add <name> ...` or the key under `mcpServers` in `~/.claude.json`. |
+| `plugin:<plugin-name>@<owner>/<repo>` | Plugin channels installed from a Claude Code plugin marketplace. |
+
+Multiple entries are space-separated:
+
+```bash
+claude --dangerously-load-development-channels server:molecule server:telegram
+```
+
+Untagged values (`molecule` instead of `server:molecule`) are rejected
+with `--dangerously-load-development-channels entries must be tagged`.
+
+## Failure mode
+
+A bare flag (`--dangerously-load-development-channels` with no value)
+walks through three layers of damage before surfacing:
+
+1. **CLI**: rejects the invocation with
+   `error: option '--dangerously-load-development-channels <servers...>' argument missing`.
+2. **SDK**: `claude-agent-sdk` (used by `claude_sdk_executor.py` in the
+   Claude Code workspace template) renders the kwarg as a bare switch when
+   the value is `None`. The CLI then never responds to the SDK's first
+   `initialize` control message.
+3. **Workspace agent**: the SDK times out with
+   `Control request timeout: initialize`. Every A2A turn wedges — 100%
+   reproducible. Caught live on workspace `dd40faf8` on 2026-05-01.
+
+Two small fixes prevent this: pass a tagged value (don't let `None`
+render as a bare switch), and verify the CLI accepts your specific
+entries before going broad.
+
+## For Molecule operators
+
+Pass `server:molecule` to enable the inbox bridge → MCP
+`notifications/claude/channel` push for the `molecule-mcp` wheel.
+
+```bash
+claude --dangerously-load-development-channels server:molecule
+```
+
+The `molecule` here matches the name you registered the wheel under in
+[Step 2 of the runtime-mcp guide](/docs/runtime-mcp#claude-code) (the
+key under `mcpServers`, or the first positional arg to `claude mcp add`).
+If you registered the wheel as `mol` or `molecule-prod`, use that name
+in the tag.
+
+When push is live, the session header prints:
+
+```
+Listening for channel messages from: server:molecule
+```
+
+…and inbound canvas/peer-agent messages render inline as
+`<channel source="molecule" ...>` synthetic user turns instead of
+arriving via `inbox_peek`.
+
+### Embedding in an SDK-driven agent
+
+If you spawn `claude` through `claude-agent-sdk` (e.g. the Claude Code
+workspace template's `claude_sdk_executor.py`), forward the tagged value
+through `extra_args`:
+
+```python
+from claude_agent_sdk import ClaudeAgentOptions
+
+ClaudeAgentOptions(
+    model=self.model,
+    permission_mode="bypassPermissions",
+    cwd=self._resolve_cwd(),
+    mcp_servers=mcp_servers,
+    system_prompt=self._build_system_prompt(),
+    resume=self._session_id,
+    extra_args={"dangerously-load-development-channels": "server:molecule"},
+)
+```
+
+The SDK forwards `extra_args` keys as `--<key> <value>` to the spawned
+CLI. Passing `None` as the value renders as a bare switch and trips the
+[Failure mode](#failure-mode) chain above.
+
+## Verification
+
+Verified live on 2026-05-02: with the tagged value in `extra_args`,
+the in-workspace agent received `<channel source="molecule" kind="..."
+peer_id="..." activity_id="..." ts="...">` tags inline as synthetic
+user turns. No `wait_for_message` poll was needed for delivery. A2A
+returned coherent replies on every turn.
+
+## When this matters
+
+Only when both of the following apply:
+
+- You're running Claude Code (any version 2.1.x or later) as the
+  workspace runtime, AND
+- The in-workspace `molecule-mcp` server is configured (it is, by
+  default, in the `claude-code` workspace template).
+
+**Hosted Molecule SaaS handles this automatically** — the executor
+passes `extra_args={"dangerously-load-development-channels": "server:molecule"}`
+when spawning the CLI. Operators on hosted SaaS do not need to do
+anything.
+
+**Self-hosted operators using the Claude Code workspace template** also
+get this for free since the template's executor sets `extra_args`. The
+flag only needs operator attention when:
+
+- Forking the Claude Code workspace template and stripping `extra_args`
+  inadvertently.
+- Running `claude` directly outside the template (e.g. interactive
+  sessions on a developer laptop) and wanting inline `<channel>` push.
+- Adding a second tagged source (e.g. `server:telegram` alongside
+  `server:molecule`) — append, don't replace.
+
+Operators on Cursor, Cline, OpenCode, codex, hermes-agent, or any
+non-Claude-Code MCP host are unaffected: those clients ignore the
+notification and the wheel's poll path delivers via
+`wait_for_message` as the universal fallback.
+
+## Forward note
+
+This requirement is a **research-preview gate**. Once Claude Code
+graduates `notifications/<channel>` from research preview to a default
+allowlist, the `--dangerously-load-development-channels` flag will no
+longer be required for the `molecule` server. Drop the `extra_args`
+entry in `claude_sdk_executor.py` (and any operator launch wrappers)
+when that happens — the wheel emits the wire shape correctly today
+and will continue to do so post-graduation.
+
+## See also
+
+- [Bring Your Own Runtime (MCP) — Inbound delivery](/docs/runtime-mcp#inbound-delivery-universal-poll-optional-push)
+- [Bring Your Own Runtime (MCP) — Step 2: Claude Code](/docs/runtime-mcp#claude-code)
+- [Troubleshooting — Control request timeout: initialize](/docs/runtime-mcp#control-request-timeout-initialize-from-the-workspace-agent)

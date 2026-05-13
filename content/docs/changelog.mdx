@@ -26,6 +26,35 @@ Entries are published daily at 23:50 UTC.
 
 ---
 
+## 2026-05-13
+
+### ✨ New features
+
+- **Graceful shutdown support for remote agents**: `run_heartbeat_loop()` and `run_agent_loop()` in `molecule-sdk-python` now accept a `stop_event: threading.Event` parameter. Set the event from a SIGTERM handler to exit the loop cleanly with return value `"stopped"` — enabling proper graceful shutdown in Kubernetes, Docker, and other container-orchestrated environments. (`molecule-sdk-python` [#8](https://git.moleculesai.app/molecule-ai/molecule-sdk-python/pulls/8))
+- **MCP HTTP/SSE transport improvements**: `a2a_mcp_server.py` now correctly identifies itself as `"molecule"` (was `"a2a-delegation"`), emits SSE heartbeats with `data: null` (was invalid `data: {}`), and only sends a heartbeat when the connection is idle — eliminating spurious heartbeat noise on every response. (`molecule-ai-workspace-runtime` [#12](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-runtime/pulls/12))
+
+### 🔧 Fixes
+
+- **PLATFORM_URL defaults aligned across all runtime modules**: all workspace runtime modules (`a2a_cli.py`, `a2a_client.py`, `a2a_mcp_server.py`, and 10 others) now consistently default `PLATFORM_URL` to `http://host.docker.internal:8080`. Previously some modules defaulted to `http://platform:8080`, causing connection failures in containerized deployments where the Docker host is not named `platform`. (`molecule-ai-workspace-runtime` [#12](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-runtime/pulls/12))
+- **Dev channel setup requires tagged-form runtime name**: setting a dev channel using the channel name alone (e.g. `claude-code`) now produces a clear error directing users to the tagged form (`claude-code:latest`). The tagged form is required because dev channels track rolling tags (`latest`, `nightly`) rather than semantic versions, and the bare channel name maps to the latest semantic version which does not support dev overrides. (`docs` [#30](https://git.moleculesai.app/molecule-ai/docs/pulls/30))
+
+### 🔒 Security
+
+- **CWE-22: Path traversal regression in org template import fixed**: a regression removed the path-traversal guard from `createWorkspaceTree` in `org_import.go`, which could allow a malicious org YAML with `filesDir: "../../../etc"` to read arbitrary server files. The fix replaces the unprotected `parseEnvFile` calls with `loadWorkspaceEnv` which applies `resolveInsideRoot` validation before accessing any path. (`molecule-core` [#810](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/810))
+
+### 📚 Docs
+
+- **Security section expanded**: the [Security hub](/docs/security) now includes a link to the [OWASP Agentic Top 10](/docs/security/owasp-agentic-top-10) risk framework and the [Security Changelog](/docs/security/changelog) alongside the SAFE-MCP advisory. A severity level table (CRITICAL / HIGH / MEDIUM / LOW) is included to calibrate response timelines. (`docs` [#35](https://git.moleculesai.app/molecule-ai/docs/pulls/35))
+- **MCP server env var renamed**: `MOLECULE_URL` is now consistently named `MOLECULE_API_URL` in the [MCP Server documentation](/docs/mcp-server) and all code examples. The old name is no longer referenced on any public surface. (`docs` [#34](https://git.moleculesai.app/molecule-ai/docs/pulls/34))
+
+### 🧹 Internal
+
+- **Docs CI SOP checklist gate**: a new `.gitea/scripts/sop-checklist-gate.py` script validates that every docs PR touching a public surface includes a corresponding changelog entry. The gate runs in CI and warns (or fails on main) when a surface-change PR is missing its entry — enforcing the cross-repo pairing requirement automatically. (`docs` [#27](https://git.moleculesai.app/molecule-ai/docs/pulls/27))
+- **Duplicate changelog entries cleaned up**: duplicate entries added to the 2026-05-10 section by an automated backfill were removed; chronological order restored. (`docs` [#28](https://git.moleculesai.app/molecule-ai/docs/pulls/28))
+- **EC2 Instance Connect staging IAM permission documented**: the IAM role used by EC2 Instance Connect for staging deployments now includes the `ssm:SendCommand` permission required to install Vector via SSM on new tenant EC2s. The fix is documented in the [EC2 provisioner tutorial](/docs/tutorials/aws-ec2-provisioner) and the internal observability runbook. (`docs` [#33](https://git.moleculesai.app/molecule-ai/docs/pulls/33))
+
+---
+
 ## 2026-05-11
 
 ### ✨ New features

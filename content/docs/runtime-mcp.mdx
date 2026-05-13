@@ -63,6 +63,15 @@ claude mcp add molecule -s user -- env \
 Reconnect with `/mcp` (or restart the Claude Code session) and the tools
 appear in the next turn.
 
+<Callout type="warn">
+Claude Code 2.1.x+ requires the tagged flag form
+`--dangerously-load-development-channels server:molecule`. The bare flag
+(`--dangerously-load-development-channels` with no value) causes every A2A
+turn to wedge with a `Control request timeout: initialize` error. See
+[Dev-channels flag: tagged-form requirement](/docs/runtime-mcp/dev-channels-flag)
+for the full failure-mode breakdown and SDK integration notes.
+</Callout>
+
 ### Hermes Agent
 
 ```bash
@@ -382,6 +391,7 @@ needed when you can't run an MCP stdio server inside your agent (rare).
 
 ## See also
 
+- [Dev-channels flag: tagged-form requirement](/docs/runtime-mcp/dev-channels-flag) — why `--dangerously-load-development-channels server:molecule` (not the bare flag) is required for inline channel push in Claude Code 2.1.x+
 - [External Agents](/docs/external-agents) — manual A2A path for non-MCP runtimes
 - [Tokens](/docs/tokens) — token management and rotation
 - [Concepts — Workspaces](/docs/concepts#workspaces)

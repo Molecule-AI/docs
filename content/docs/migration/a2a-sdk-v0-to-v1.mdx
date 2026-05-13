@@ -79,7 +79,7 @@ The factories also let you mount the JSON-RPC endpoint at any path
 
 If you pass `state_transition_history=...` as a kwarg to
 `AgentCapabilities` under v1, Pydantic will reject it. Drop the kwarg.
-See [`workspace/main.py:215`](https://git.moleculesai.app/Molecule-AI/molecule-core/blob/main/workspace/main.py#L215)
+See [`workspace/main.py`](https://git.moleculesai.app/molecule-ai/molecule-core/src/branch/main/workspace/main.py)
 for the explanatory comment that prevents future accidental re-adds.
 
 ## Common error shapes
@@ -104,7 +104,7 @@ even if the field name isn't on the cheat sheet above.
 1. **Bump the dep** — `a2a-sdk[http-server]>=0.3.25` is the floor; remove
    any `<1.0` upper bound. The Molecule wheel uses
    `a2a-sdk[http-server]>=0.3.25` with no upper bound (see
-   [`molecule-ai-workspace-runtime/pyproject.toml`](https://git.moleculesai.app/Molecule-AI/molecule-ai-workspace-runtime/blob/main/pyproject.toml)).
+   [`molecule-ai-workspace-runtime/pyproject.toml`](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-runtime/src/branch/main/pyproject.toml)).
 2. **Fix imports** — sweep the four renamed/removed symbols above. A
    safe grep is `grep -rn "from a2a\\|import a2a"` across your tree.
 3. **Fix removed-field reads/writes** — search for
@@ -118,7 +118,7 @@ even if the field name isn't on the cheat sheet above.
 6. **Re-run tests** — fixture-level mocks of `a2a.helpers` /
    `a2a.utils` need to mock both names so tests still pass during the
    rename rollout (see
-   [`workspace/tests/conftest.py:105-111`](https://git.moleculesai.app/Molecule-AI/molecule-core/blob/main/workspace/tests/conftest.py#L105-L111)
+   [`workspace/tests/conftest.py`](https://git.moleculesai.app/molecule-ai/molecule-core/src/branch/main/workspace/tests/conftest.py)
    for the dual-name pattern).
 
 ## Before / after diffs
@@ -178,7 +178,7 @@ The `enable_v0_3_compat=True` flag on `create_jsonrpc_routes` is what
 keeps in-flight v0 callers (peers that haven't migrated yet) from
 breaking — it accepts the old method names and translates them. The
 Molecule runtime ships with this flag on (see
-[`workspace/main.py:279`](https://git.moleculesai.app/Molecule-AI/molecule-core/blob/main/workspace/main.py#L279));
+[`workspace/main.py`](https://git.moleculesai.app/molecule-ai/molecule-core/src/branch/main/workspace/main.py));
 strip it once your entire fleet is on v1.
 
 ## For downstream consumers
@@ -207,8 +207,8 @@ migrate at your own pace.
 
 ## See also
 
-- [`molecule-ai-workspace-runtime` v0.1.11 release](https://git.moleculesai.app/Molecule-AI/molecule-ai-workspace-runtime/releases/tag/v0.1.11) — first wheel containing KI-009
-- [PR #39 — feat: migrate a2a-sdk 1.x (KI-009)](https://git.moleculesai.app/Molecule-AI/molecule-ai-workspace-runtime/pulls/39)
-- [PR #48 — feat(a2a): dual-compat for a2a-sdk 0.3.x and 1.x](https://git.moleculesai.app/Molecule-AI/molecule-ai-workspace-runtime/pulls/48) — runtime-side compat shim that keeps v0 peers working against the v1 wheel
+- [`molecule-ai-workspace-runtime` v0.1.11 release](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-runtime/releases/tag/v0.1.11) — first wheel containing KI-009
+- PR #39 (feat: migrate a2a-sdk 1.x / KI-009) — closed without merge; PR content is historical
+- PR #48 (feat(a2a): dual-compat for a2a-sdk 0.3.x and 1.x) — closed without merge; PR content is historical
 - [Bring Your Own Runtime (MCP)](/docs/runtime-mcp) — universal wheel install path
 - [External Agents](/docs/external-agents) — manual A2A path for non-MCP runtimes

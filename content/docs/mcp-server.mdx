@@ -25,7 +25,8 @@ npx @molecule-ai/mcp-server@1.0.0
       "command": "npx",
       "args": ["@molecule-ai/mcp-server@1.0.0"],
       "env": {
-        "MOLECULE_URL": "http://localhost:8080"
+        "MOLECULE_URL": "http://localhost:8080",
+        "MOLECULE_API_KEY": "your-bearer-token"
       }
     }
   }
@@ -36,10 +37,11 @@ npx @molecule-ai/mcp-server@1.0.0
   **Pin the package version.** The examples above use `@1.0.0` — always specify an exact version and omit the `-y` flag. An unpinned `npx -y @molecule-ai/mcp-server` (no version) silently installs whatever npm serves on the next restart; if the package is ever compromised, it runs with your full MCP client permissions. Check [npm](https://www.npmjs.com/package/@molecule-ai/mcp-server) for the latest stable release before upgrading.
 </Callout>
 
-For SaaS deployments, set `MOLECULE_URL` to your tenant URL:
+For SaaS deployments, set `MOLECULE_URL` to your tenant URL and add your API key:
 
 ```json
-"MOLECULE_URL": "https://your-org.moleculesai.app"
+"MOLECULE_URL": "https://your-org.moleculesai.app",
+"MOLECULE_API_KEY": "your-bearer-token"
 ```
 
 ### Verify
@@ -152,6 +154,34 @@ The MCP server exposes tools across these categories:
 | Variable | Default | Description |
 |---|---|---|
 | `MOLECULE_URL` | `http://localhost:8080` | Platform API URL |
+| `MOLECULE_API_KEY` | — | Bearer token for platform authentication |
+| `MCP_SERVER_PORT` | `3000` | TCP port for HTTP/SSE transport |
+
+## Transport modes
+
+The MCP server supports two transport modes:
+
+### stdio (default, for local AI clients)
+
+Claude Code, Cursor, and similar local AI clients use stdio transport. The client spawns the MCP server as a child process and communicates via JSON-RPC over stdin/stdout. Configure in your AI client's `mcp.json` as shown in Quick start above.
+
+### HTTP/SSE (for remote agents and headless clients)
+
+For agents running on remote servers or in environments where stdio is not available, the MCP server exposes an HTTP endpoint with Server-Sent Events (SSE) for streaming responses. The agent card and tool responses are available at:
+
+```
+http://localhost:3000/agent/card   # MCP server info + tool manifest
+http://localhost:3000/             # SSE stream for responses
+```
+
+Start the server in HTTP/SSE mode:
+
+```bash
+MCP_SERVER_PORT=3000 npm start
+# Server starts on http://localhost:3000
+```
+
+Configure your MCP client to connect over HTTP. The server emits `data: null` heartbeats every 30 seconds on idle connections to keep proxies and load balancers from closing the SSE stream.
 
 ## Troubleshooting
 
@@ -159,4 +189,5 @@ The MCP server exposes tools across these categories:
 |---|---|
 | Connection refused | Check `MOLECULE_URL` points to running platform |
 | 401 Unauthorized | Token expired or revoked — create a new one |
+| Port already in use | Set `MCP_SERVER_PORT` to an available port if 3000 is taken |
 | Tools not showing | Run `npx @molecule-ai/mcp-server@1.0.0` standalone to check errors |

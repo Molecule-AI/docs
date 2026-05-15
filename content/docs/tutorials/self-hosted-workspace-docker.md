@@ -12,9 +12,9 @@ This guide covers running a Molecule AI workspace agent as a Docker container on
 
 The Molecule AI workspace Dockerfile includes:
 
-- A `HEALTHCHECK` directive that probes the agent card endpoint every 30 seconds
 - A uvicorn server on port 8000 (configurable via `PORT`)
-- Support for `stop_event` graceful shutdown via SIGTERM
+- A healthcheck endpoint at `/.well-known/agent-card.json` (used by Docker and Kubernetes probes)
+- Graceful SIGTERM handling via uvicorn — the heartbeat loop and adapter tasks shut down cleanly
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -24,9 +24,9 @@ The Molecule AI workspace Dockerfile includes:
 │  │  workspace container                 │   │
 │  │                                     │   │
 │  │  uvicorn (port 8000)                │   │
-│  │    └─ /agent/card  ← HEALTHCHECK    │   │
+│  │    └─ /.well-known/agent-card.json  ← HEALTHCHECK │   │
 │  │                                     │   │
-│  │  run_heartbeat_loop(stop_event)     │   │
+│  │  heartbeat loop + A2A agent            │   │
 │  └──────────────┬──────────────────────┘   │
 │                 │                              │
 │  host.docker.internal:8080                    │
@@ -55,7 +55,7 @@ WORKSPACE_ID=$(echo "$WORKSPACE" | python3 -c "import json,sys; print(json.load(
 echo "Workspace ID: $WORKSPACE_ID"
 ```
 
-Save the returned `WORKSPACE_ID` and bearer token from the next step.
+Save the returned `WORKSPACE_ID`. The workspace agent obtains its bearer token automatically during its first registration with the platform.
 
 ## Step 2: Pull the workspace image
 
@@ -72,11 +72,9 @@ docker pull "${REGISTRY_PREFIX}.dkr.ecr.us-east-1.amazonaws.com/molecule-workspa
 
 | Variable | Default | Description |
 |---|---|---|
-| `MOLECULE_API_URL` | `http://localhost:8080` | Platform API URL. From Docker on Linux/macOS, use `http://host.docker.internal:8080` to reach the host machine. |
-| `MOLECULE_API_KEY` | — | Bearer token obtained during agent registration |
-| `WORKSPACE_ID` | — | Workspace ID from Step 1 |
-| `PORT` | `8000` | Agent server port (matches HEALTHCHECK) |
-| `AGENT_CARD_URL` | `http://localhost:${PORT}/agent/card` | Advertised agent card URL (must be reachable from the platform) |
+| `PLATFORM_URL` | `http://localhost:8080` | Platform API URL. Inside a Docker container, use `http://host.docker.internal:8080` to reach the platform on the host machine. |
+| `WORKSPACE_ID` | — | Workspace ID from Step 1 (required; no default) |
+| `PORT` | `8000` | Agent server port. Must match `containerPort` in Kubernetes and the port mapped with `-p` in Docker. |
 
 ## Step 4: Run the container
 
@@ -86,8 +84,7 @@ docker pull "${REGISTRY_PREFIX}.dkr.ecr.us-east-1.amazonaws.com/molecule-workspa
 docker run -d \
   --name molecule-workspace \
   -p 8000:8000 \
-  -e MOLECULE_API_URL="http://host.docker.internal:8080" \
-  -e MOLECULE_API_KEY="your-agent-bearer-token" \
+  -e PLATFORM_URL="http://host.docker.internal:8080" \
   -e WORKSPACE_ID="your-workspace-id" \
   -e PORT=8000 \
   "${REGISTRY_PREFIX}.dkr.ecr.us-east-1.amazonaws.com/molecule-workspace:latest"
@@ -103,7 +100,7 @@ docker inspect --format='{{.State.Health.Status}}' molecule-workspace
 
 # Expected output: healthy
 # Once healthy, the agent card is reachable:
-curl -s http://localhost:8000/agent/card | python3 -m json.tool
+curl -s http://localhost:8000/.well-known/agent-card.json | python3 -m json.tool
 ```
 
 ### Docker Compose
@@ -115,8 +112,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      MOLECULE_API_URL: "http://host.docker.internal:8080"
-      MOLECULE_API_KEY: "your-agent-bearer-token"
+      PLATFORM_URL: "http://host.docker.internal:8080"
       WORKSPACE_ID: "your-workspace-id"
       PORT: "8000"
     # Linux hosts: add host.docker.internal resolution
@@ -124,7 +120,7 @@ services:
     #   - "host.docker.internal:host-gateway"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/agent/card"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/.well-known/agent-card.json"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -133,34 +129,35 @@ services:
 
 ## Step 5: Graceful shutdown
 
-The workspace agent supports graceful shutdown via a `stop_event: threading.Event`. When the container receives SIGTERM (e.g. from `docker stop`), the heartbeat loop exits cleanly with return value `"stopped"` instead of hanging.
+When the container receives SIGTERM (e.g. from `docker stop` or Kubernetes pod deletion), the workspace's uvicorn server initiates graceful shutdown: the heartbeat loop stops, active A2A tasks are given a grace period to complete, and any snapshotable state is persisted before the process exits.
 
-To enable SIGTERM handling in your agent code:
+To integrate the heartbeat loop into custom agent code:
 
 ```python
-import signal, threading
-from molecule_agent import RemoteAgentClient
+import asyncio
+import os, signal
+from heartbeat import HeartbeatLoop
 
-client = RemoteAgentClient(
-    molecule_api_url=os.environ["MOLECULE_API_URL"],
-    api_key=os.environ["MOLECULE_API_KEY"],
-    workspace_id=os.environ["WORKSPACE_ID"],
-)
-
-stop_event = threading.Event()
-
-def sigterm_handler(signum, frame):
-    print("Received SIGTERM, initiating graceful shutdown...")
-    stop_event.set()
-
-signal.signal(signal.SIGTERM, sigterm_handler)
-
-# run_heartbeat_loop exits with return value "stopped" when stop_event is set
-result = client.run_heartbeat_loop(stop_event=stop_event)
-print(f"Heartbeat loop stopped: {result}")
+# SIGTERM is handled by the Docker runtime, which sends the signal to the
+# workspace process. The workspace (via uvicorn) initiates graceful shutdown:
+# the heartbeat loop is stopped, any active adapter tasks are cancelled, and
+# in-flight A2A requests are given a grace period to complete.
+#
+# For custom integration with the heartbeat loop directly:
+async def main():
+    heartbeat = HeartbeatLoop(
+        platform_url=os.environ["PLATFORM_URL"],
+        workspace_id=os.environ["WORKSPACE_ID"],
+    )
+    heartbeat.start()
+    try:
+        await asyncio.Event().wait()  # keep running
+    finally:
+        await heartbeat.stop()
+        print("Heartbeat loop stopped.")
 ```
 
-Without explicit SIGTERM handling, the container will be killed after the Docker default 10-second timeout. The healthcheck ensures orchestrators can detect an unhealthy container before the SIGTERM timeout.
+The Docker `stop` command sends SIGTERM and waits up to 10 seconds by default before sending SIGKILL. The healthcheck ensures orchestrators detect an unhealthy container before the SIGTERM timeout.
 
 ## Kubernetes deployment
 
@@ -172,7 +169,7 @@ ports:
     containerPort: 8000
 livenessProbe:
   httpGet:
-    path: /agent/card
+    path: /.well-known/agent-card.json
     port: http
   initialDelaySeconds: 30
   periodSeconds: 30
@@ -180,7 +177,7 @@ livenessProbe:
   failureThreshold: 3
 readinessProbe:
   httpGet:
-    path: /agent/card
+    path: /.well-known/agent-card.json
     port: http
   initialDelaySeconds: 10
   periodSeconds: 10
@@ -189,13 +186,13 @@ readinessProbe:
 terminationGracePeriodSeconds: 120
 ```
 
-> **Note:** `terminationGracePeriodSeconds` must exceed the liveness probe failure window (3 × 30s = 90s) so that Kubernetes sends SIGTERM and allows graceful shutdown before the pod is killed. The 120s value here gives a 30s buffer beyond the 90s threshold.
+> **Note:** The Kubernetes `terminationGracePeriodSeconds` should exceed the liveness probe failure threshold so that the probe can register a failure before the pod is killed. With `periodSeconds: 30` and `failureThreshold: 3`, the probe does not register a failure until approximately 120–150s after the container becomes unhealthy. Set `terminationGracePeriodSeconds: 120` or higher.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Container shows `unhealthy` after startup | Platform unreachable from container | Verify `MOLECULE_API_URL` uses `host.docker.internal` (Docker) or the correct host IP |
+| Container shows `unhealthy` after startup | Platform unreachable from container | Verify `PLATFORM_URL` uses `host.docker.internal` (Docker) or the correct host IP |
 | `curl: (7) Failed to connect` on healthcheck | Container not fully started | Wait up to 30s; increase `start_period` |
 | Agent not appearing on canvas | Wrong `WORKSPACE_ID` or expired token | Re-run registration; check platform logs |
 | `host.docker.internal` not resolved | Linux host without the Docker flag | Use `--add-host=host.docker.internal:host-gateway` or the host's LAN IP |

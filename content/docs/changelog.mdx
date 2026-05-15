@@ -12,7 +12,7 @@ Entries are published daily at 23:50 UTC.
 
 ### ✨ New features
 
-- **Self-hosted workspace Docker deployment guide**: a new [Self-hosted workspace with Docker](/docs/self-hosting) tutorial covers end-to-end deployment of a Molecule AI workspace using Docker — including image pulling, environment configuration, volume mounts, and health-check verification. Replaces the fragmentary "coming soon" placeholder that had been in the self-hosting section. (`docs` [#40](https://git.moleculesai.app/molecule-ai/docs/pulls/40))
+- **Self-hosted workspace Docker deployment guide**: a new [Self-hosted workspace with Docker](/docs/self-hosting) tutorial covers end-to-end deployment of a Molecule AI workspace using Docker — including image pulling, environment configuration, volume mounts, and health-check verification. Includes a corrected Kubernetes YAML example (`terminationGracePeriodSeconds: 120` to match the liveness probe threshold) and a SIGTERM graceful shutdown code example. (`docs` [#46](https://git.moleculesai.app/molecule-ai/docs/pulls/46))
 - **`dev-channels` flag requirement documented**: a new [dev-channels flag reference page](/docs/runtime-mcp/dev-channels-flag) explains why Claude Code 2.1.x+ requires `--dangerously-load-development-channels server:molecule` (the tagged allowlist form, not the bare `--dangerously-skip-ipc-lockfile` flag) for inline channel push from the molecule MCP wheel. Covers the three-layer failure mode when the bare flag is used and how the tagged form resolves it. (`docs` [#30](https://git.moleculesai.app/molecule-ai/docs/pulls/30))
 
 ### 🔧 Fixes

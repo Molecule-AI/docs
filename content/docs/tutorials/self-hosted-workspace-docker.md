@@ -186,10 +186,10 @@ readinessProbe:
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 3
-terminationGracePeriodSeconds: 30
+terminationGracePeriodSeconds: 120
 ```
 
-> **Note:** The Kubernetes `terminationGracePeriodSeconds` should exceed the healthcheck failure threshold (3 × 30s = 90s) to allow the liveness probe to fail before the pod is killed.
+> **Note:** `terminationGracePeriodSeconds` must exceed the liveness probe failure window (3 × 30s = 90s) so that Kubernetes sends SIGTERM and allows graceful shutdown before the pod is killed. The 120s value here gives a 30s buffer beyond the 90s threshold.
 
 ## Troubleshooting
 

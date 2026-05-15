@@ -62,10 +62,7 @@ Audit your tenant slugs manually. Any slug containing the characters `?`, `#`, `
 
 ## Fix summary
 
-Two-layer defence applied in `scripts/promote-tenant-image.sh`:
-
-1. **`set -f`** (line 57): disables glob expansion before any slug is used, so `*`, `?`, and `[` are treated as literal characters.
-2. **`validate_slug()`**: new function using RFC-1123 regex validation (`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`). Rejects non-conforming slugs with exit code 64 before any network call is issued.
+Fix adds `validate_slug()` (new function) — RFC-1123 regex validation (`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`), exits with code 64 on invalid slugs before any network call.
 
 ---
 

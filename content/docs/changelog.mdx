@@ -25,7 +25,7 @@ Entries are published daily at 23:50 UTC.
 
 ### ✨ New features
 
-- **Docker HEALTHCHECK for workspace containers**: the workspace `Dockerfile` now includes a `HEALTHCHECK --interval=30s --timeout=5s --retries=3` directive that probes `http://localhost:${PORT:-8000}/agent/card`. Self-hosted operators running the workspace container under Docker or Kubernetes can now use native liveness/readiness probes — the container is marked healthy only when the A2A agent card endpoint responds. (`molecule-core` [#883](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/883))
+- **Docker HEALTHCHECK for workspace containers**: the workspace `Dockerfile` now includes a `HEALTHCHECK --interval=30s --timeout=5s --retries=3` directive that probes `http://localhost:${PORT:-8000}/.well-known/agent-card.json`. Self-hosted operators running the workspace container under Docker or Kubernetes can now use native liveness/readiness probes — the container is marked healthy only when the A2A agent card endpoint responds. (`molecule-core` [#883](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/883))
 
 ### 📚 Documentation
 

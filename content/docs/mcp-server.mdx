@@ -76,6 +76,11 @@ The MCP server exposes tools across these categories:
 | `check_delegations` | `GET /workspaces/:id/delegations` | Check delegation status |
 | `list_peers` | `GET /registry/:id/peers` | Find peer workspaces |
 | `notify_user` | `POST /workspaces/:id/notify` | Push notification to canvas |
+| `broadcast_message` | `POST /broadcast` | Fan out an org-wide notification to all non-removed peer workspaces. Requires `broadcast_enabled=true` on the workspace (admin toggle via `PATCH /workspaces/:id/abilities`). Returns HTTP 403 if disabled. |
+
+<Callout type="warn">
+**`send_message_to_user` / `notify_user` behavior:** When `talk_to_user_enabled=false` (default `true`), both tools return HTTP 403 with a hint to use `delegate_task` instead. The canvas ChatTab shows a banner with an Enable button. Admins control this via `PATCH /workspaces/:id/abilities`.
+</Callout>
 
 ### Configuration and secrets
 

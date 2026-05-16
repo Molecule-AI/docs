@@ -20,21 +20,6 @@ Entries are published daily at 23:50 UTC.
 
 ---
 
-## 2026-05-16
-
-### 🔧 Fixes
-
-- **Hermes workspace MCP server tools now reach the agent loop**: the `molecule-ai/mcp-server` process was starting correctly on `127.0.0.1:9100` and the `/mcp` route was verified working (JSON-RPC `initialize` returned 12 tools), but the Hermes agent was not calling platform tools because `MOLECULE_MCP_SERVER_URL` was not wired into the Hermes `config.yaml`. The `start.sh` now sets `MOLECULE_MCP_SERVER_URL=http://localhost:9100` at startup, and the agent loop correctly connects. (`molecule-ai-workspace-template-hermes` [#22](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-template-hermes/pulls/22))
-- **Hermes workspace bearer token 401 on MCP tool calls fixed (two-part fix)**: a fresh Hermes workspace was returning HTTP 401 on every `list_peers` and A2A MCP tool call with the canned *"bearer token may be invalid"* message. Two independent root causes were identified and fixed: (1) workspace side — `CONFIGS_DIR` was not set in the agent environment, so the molecule MCP server could not locate the token file at `/configs/.auth_token`. `start.sh` now sets `CONFIGS_DIR=/configs` and ensures the agent owns the `/configs` directory. (`molecule-ai-workspace-template-hermes` [#23](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-template-hermes/pulls/23)); (2) platform side — two workspace-server token-injection paths were writing `/configs/.auth_token` and `/configs/.platform_inbound_secret` as `root:root` after the template entrypoint's `chown -R agent:agent /configs` had already run. Since the MCP server runs as agent uid 1000 (via `gosu agent`), `platform_auth.get_token()` hit `Permission denied` → empty bearer → 401. Both injection paths now stamp token files as uid/gid 1000 (agent) instead of root. (`molecule-core` [#1327](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/1327))
-- **Claude Code template Kimi K2.6 model routed to official `api.kimi.com/coding` endpoint**: the Claude Code workspace template's adapter now correctly routes `Kimi K2.6` to the official Kimi coding endpoint (`api.kimi.com/coding`) instead of the default Anthropic-compatible endpoint, per Kimi's official API specification. (`molecule-ai-workspace-template-claude-code` [#24](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-template-claude-code/pulls/24))
-
-### 🧹 Internal
-
-- **Platform Files API groundwork** (`molecule-core`): Phase 1–3 of the Files API roots RFC (`internal#425`) landed across four PRs — the `secrets` package now has a canonical credential-shape regex SSOT (`#1255`); the FilesTab canvas component gains an `/agent-home` root option and a secret-shape denial placeholder (`#1257`); the API gains a stub `allowedRoots` key with a 501 short-circuit (`#1247`); and the handler test suite was hardened to prevent data races during `db.DB` swap (`#1267`). These are infrastructure PRs that enable future per-container home directory isolation — the `/agent-home` root will be documented when the API ships.
-- **Scripts CI improvements** (`internal`): SOP tier-check now tolerates empty/invalid tokens while the token is being provisioned (`internal#431`); the `continue-on-error` guard on the PR-body gate is disabled when the runner backlog is draining to avoid silent pass (`internal#437`).
-
----
-
 ## 2026-05-12
 
 ### 🔒 Security

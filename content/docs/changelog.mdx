@@ -10,11 +10,6 @@ Entries are published daily at 23:50 UTC.
 
 ## 2026-05-14
 
-### 🔒 Security
-
-- **CWE-78 regression in `expandWithEnv` POSIX-identifier guard fixed (Critical)**: the shell-identifier guard in `expandWithEnv` (`org_helpers.go:82`) was inadvertently removed during a regression window between staging and main promotion. This guard prevents org YAML configurations from expanding invalid shell identifiers (e.g. `${HOME}`, `${DOCKER_HOST}`, `${AWS_SECRET_ACCESS_KEY}`) as environment variables — blocking secret exfiltration via malicious `workspace_dir` or channel config fields. Restored with regression tests covering `${0}`, `${5}`, `${1VAR}`, `${}`, `$0`, `$5`. Full advisory: [Security Changelog](/docs/security/changelog). (`molecule-core` [#1030](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/1030))
-- **OFFSEC-003: workspace-side A2A boundary marker escaping (trust boundary hardening)**: the `tool_delegate_task` workspace tool now wraps delegation output with `_A2A_BOUNDARY_START_ESCAPED` / `_A2A_BOUNDARY_END_ESCAPED` instead of raw markers, preventing raw boundary markers from leaking into output alongside their escaped form. Additionally, responses containing the raw closer `[A2A_RESULT_FROM_PEER]` are now truncated before sanitization — so injection of the raw closer cannot be retroactively re-added by the sanitization pass. Together with the platform-side sanitization (shipped 2026-05-11), this closes the full OFFSEC-003 trust-boundary for delegation result delivery. (`molecule-core` [#1073](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/1073))
-
 ### 🐛 Bug fixes
 
 - **Canvas WCAG 1.4.3 contrast ratio fixed for TIER_CONFIG legend**: the tier legend text in the canvas now meets the 4.5:1 contrast ratio required by WCAG 1.4.3 for normal text. (`molecule-core` [#990](https://git.moleculesai.app/molecule-ai/molecule-core/pulls/990))

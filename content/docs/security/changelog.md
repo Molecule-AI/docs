@@ -9,37 +9,6 @@ This page documents security fixes shipped in the Molecule AI platform. Each ent
 
 ---
 
-## 2026-05-14 — CWE-78: Regression in `expandWithEnv` POSIX-identifier Guard
-
-**Severity:** Critical (CWE-78)
-**PR:** [#1030](https://git.moleculesai.app/molecule-ai/molecule-core/pull/1030)
-**Affected:** `workspace-server/internal/handlers/org_helpers.go` — `expandWithEnv`
-
-### Vulnerability
-
-`expandWithEnv` expands `${VAR}` and `$VAR` references in org YAML configuration fields (notably `workspace_dir` and channel config) using the current process environment. The POSIX shell-identifier guard was inadvertently removed during a regression window between staging and main promotion, causing digit-prefixed and empty keys to be passed through to `os.Getenv` instead of being returned literally.
-
-An attacker who can supply org YAML (e.g., via a compromised org template import or a malicious admin account) could inject references such as `${HOME}`, `${DOCKER_HOST}`, `${AWS_SECRET_ACCESS_KEY}`, or `${PATH}` to exfiltrate host secrets into workspace or channel configuration fields.
-
-### Fix
-
-Restored the POSIX identifier guard at `org_helpers.go:82`. Keys not starting with `[a-zA-Z_]` (including empty key) are now returned literally as `$key` without consulting `os.Getenv`:
-
-```go
-c := key[0]
-if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
-    return "$" + key // not a valid shell identifier — return literally
-}
-```
-
-Regression tests cover `${0}`, `${5}`, `${1VAR}`, `${}`, `$0`, `$5`.
-
-### User-facing summary
-
-Org YAML configuration fields no longer expand invalid shell identifiers as environment variables. Configurations containing `${0}`, `${}`, or `${1VAR}` patterns are returned as-is. If you observe literal `$` prefixes appearing in workspace directory or channel configuration fields after upgrading, this indicates a previously-masked configuration issue — contact support.
-
----
-
 ## 2026-04-20 — CWE-22: Path Traversal in `copyFilesToContainer`
 
 **Severity:** High (CWE-22)

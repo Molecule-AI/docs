@@ -13,6 +13,7 @@ Entries are published daily at 23:50 UTC.
 ### 🔧 Fixes
 
 - **Hermes workspace MCP server tools now reach the agent loop**: the `molecule-ai/mcp-server` process was starting correctly on `127.0.0.1:9100` and the `/mcp` route was verified working (JSON-RPC `initialize` returned 12 tools), but the Hermes agent was not calling platform tools because `MOLECULE_MCP_SERVER_URL` was not wired into the Hermes `config.yaml`. The `start.sh` now sets `MOLECULE_MCP_SERVER_URL=http://localhost:9100` at startup, and the agent loop correctly connects. (`molecule-ai-workspace-template-hermes` [#22](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-template-hermes/pulls/22))
+- **Hermes workspace bearer token 401 on MCP tool calls fixed**: a fresh Hermes workspace was returning HTTP 401 on every `list_peers` and A2A MCP tool call with the canned *"bearer token may be invalid"* message, even though the correct bearer was present on disk at `/configs/.auth_token`. The root cause was that `CONFIGS_DIR` was not set in the agent environment, so the molecule MCP server could not locate the token file. The `start.sh` now sets `CONFIGS_DIR=/configs` and ensures the agent owns the `/configs` directory, allowing the MCP server to find the bearer token at startup. (`molecule-ai-workspace-template-hermes` [#23](https://git.moleculesai.app/molecule-ai/molecule-ai-workspace-template-hermes/pulls/23))
 
 ### 🧹 Internal
 

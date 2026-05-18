@@ -35,7 +35,7 @@ runtime.
 | Shape | Description |
 |-------|-------------|
 | agentskills.io format | `SKILL.md` + optional scripts, hooks, and `plugin.yaml` manifest |
-| MCP server | Model Context Protocol server — available in the Hermes runtime template (`molecule-ai-workspace-template-hermes`); MCP server is launched at container startup and registered as an A2A MCP tool provider, enabling platform tools like `list_peers`, `delegate_task`, and `send_message_to_user` inside the Hermes agent loop |
+| MCP server | Works with any MCP-compatible AI agent (Claude Code, Cursor, etc.). In the Hermes runtime template the MCP server is launched at container startup as an A2A tool provider, exposing platform tools including `list_peers`, `delegate_task`, and `send_message_to_user` to the Hermes agent loop. See the [MCP Server guide](/docs/mcp-server) for setup and available tools. |
 
 The shape is orthogonal to the source. A `github://` plugin and a `local://`
 plugin can both be agentskills.io format. The per-runtime adapter inside the
